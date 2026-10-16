@@ -1,0 +1,53 @@
+# ============================================================================
+# Bước 1 (fine-tune LoRA) + Bước 2 (sinh ảnh)  --  Việt, TV3
+#
+# CÀI NHƯ SAU (đừng dùng requirements.txt gốc, xem ghi chú ở cuối file):
+#
+#   conda create -n datadream python=3.10 -y
+#   conda activate datadream
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
+#   pip install -r requirements-gen.txt
+#
+# torch/torchvision KHÔNG ghim ở đây vì phải lấy từ index cu128 riêng cho card
+# Blackwell (RTX 50xx). Kiểm tra sau khi cài:
+#   python -c "import torch; print(torch.cuda.get_arch_list())"   # phải có sm_120
+# ============================================================================
+
+# ---- Ghim chặt: đây là bộ phiên bản code chạy được ----
+# diffusers: datadream.py gọi check_min_version("0.26.0.dev0") nên không được
+#   thấp hơn 0.26. Trần là 0.29 vì từ 0.30 lớp `LoraLoaderMixin` bị xóa
+#   (datadream.py:36) VÀ `lora_state_dict` thôi trả về tuple
+#   (state_dict, network_alphas) như datadream.py:537 đang giả định.
+#   Đổi tên lớp thôi là KHÔNG đủ - sẽ lỗi ở bước save/resume, tức là lỗi sau
+#   khi đã train xong 4 tiếng.
+diffusers==0.27.2
+
+# huggingface_hub: datadream.py:51 import `huggingface_hub.utils.insecure_hashlib`,
+#   thứ đã bị xóa từ 0.26. Đây là lý do BẮT BUỘC phải ghim.
+huggingface_hub==0.22.2
+
+transformers==4.39.3
+tokenizers==0.15.2
+accelerate==0.29.3
+peft==0.10.0
+safetensors==0.4.3
+
+# numpy 2.x phá vỡ bộ trên; giữ ở 1.x.
+numpy==1.26.4
+Pillow==10.3.0
+
+# ---- Phụ thuộc trực tiếp của repo ----
+fire==0.6.0
+ftfy==6.2.0
+PyYAML==6.0.1
+tqdm==4.66.4
+tensorboard==2.16.2
+
+# ---- KHÔNG cần cho bước 1-2, đừng cài ----
+# wandb      : datadream.py chỉ import khi --report_to=wandb. Nhóm dùng tensorboard.
+# xformers   : chỉ import khi --enable_xformers_memory_efficient_attention.
+#              Bản cho sm_120 còn thất thường; dùng --gradient_checkpointing thay thế.
+# clip, timm, loralib, nltk, seaborn, scikit-learn, munch, pytz, ranger-fm,
+# openai, langchain, google-cloud-aiplatform, gspread, oauth2client,
+# invisible_watermark : thuộc bước 3 (classify) hoặc không dùng tới. Cài vào
+#              chỉ làm pip phải giải xung đột phiên bản với bộ đã ghim ở trên.

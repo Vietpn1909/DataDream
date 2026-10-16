@@ -1,0 +1,41 @@
+# ============================================================================
+# Bước 3 (train CLIP)  --  TV4, TV5
+#
+# TRÊN COLAB: torch/torchvision đã có sẵn, ĐỪNG ghim lại, sẽ phá môi trường
+# và mất ~10 phút cài lại. Chỉ chạy:
+#
+#   !pip install -q -r requirements-clf.txt
+#   !pip install -q git+https://github.com/openai/CLIP.git
+#
+# TRÊN MÁY RIÊNG: cài torch trước theo đúng cách ở requirements-gen.txt.
+#
+# LƯU Ý: bộ ghim này CHƯA được chạy thử end-to-end (bước 3 chưa tới lượt).
+# Ai chạy đầu tiên mà phải sửa phiên bản nào thì sửa thẳng vào file này và
+# mở PR [clf], đừng chỉ sửa trong notebook của mình.
+# ============================================================================
+
+# clip của OpenAI không có trên PyPI, phải cài từ git (lệnh riêng ở trên):
+#   pip install git+https://github.com/openai/CLIP.git
+
+# classify/models/clip.py:9 import từ đường dẫn PRIVATE
+# `timm.models._manipulate`, nên timm là phụ thuộc nhạy phiên bản.
+timm==0.9.16
+
+# classify/models/lora.py:5 - LoRA cho CLIP dùng loralib, không dùng peft.
+loralib==0.1.2
+
+# classify/main.py:11 `import wandb` là VÔ ĐIỀU KIỆN (assert ở dòng 135 là
+# code chết), nên vẫn phải cài dù chạy --log=tensorboard.
+wandb==0.17.0
+
+munch==4.0.0
+PyYAML==6.0.1
+tensorboard==2.16.2
+scikit-learn==1.4.2
+numpy==1.26.4
+Pillow==10.3.0
+
+# ---- KHÔNG cần, đừng cài ----
+# openai, langchain, google-cloud-aiplatform, gspread, oauth2client:
+#   có trong requirements.txt gốc nhưng không file .py nào trong repo import.
+# diffusers, peft, accelerate: thuộc bước 1-2, không cần cho classify.

@@ -1,0 +1,277 @@
+# Những chỗ repo gốc chưa chạy được
+
+Tất cả các mục dưới đây đã được **kiểm chứng trực tiếp trên code** trong repo này,
+không phải phỏng đoán. Số dòng tính theo commit gốc `a71515f`.
+
+Đọc hết mục 1–3 trước khi chạy bất cứ thứ gì, vì chúng **chặn người khác**, không
+chỉ chặn mình.
+
+Kiểm tra nhanh xem patch nào đã áp:
+
+```bash
+python scripts/check_env.py
+```
+
+---
+
+## Mức CHẶN — phải xong trước khi nhóm chạy số
+
+### 1. Cắt danh sách lớp xuống 20 — làm ở cả 3 module, giữ nguyên tên dataset
+
+`SUBSET_NAMES['fgvc_aircraft']` hiện có 100 variant, xuất hiện ở ba file:
+
+| file | vị trí |
+|---|---|
+| `DataDream/util_data.py` | ~dòng 231 |
+| `generate/util.py` | ~dòng 250 |
+| `classify/util_data.py` | ~dòng 246 |
+
+**Cách làm: giữ nguyên tên `fgvc_aircraft`, chỉ cắt list xuống 20 dòng** theo
+`configs/classes_fgvc_aircraft20.txt`.
+
+> **Đừng tạo tên dataset mới kiểu `fgvc_aircraft20`.** Nghe thì gọn hơn nhưng
+> tên mới sẽ rơi vào nhánh `else: raise ValueError` ở rất nhiều chỗ so chuỗi
+> cứng. Riêng `classify/` có ít nhất 6 chỗ phải sửa thêm:
+> `classify/models/clip.py:20` (từ điển tên miền thứ ba, dễ bị bỏ sót),
+> `classify/data.py:243` và `:273` (nhánh transform),
+> `classify/data.py:553` và `:643` (nhánh loader), cộng `SUBSET_NAMES`.
+> Giữ nguyên tên thì **không phải sửa một từ điển hay một nhánh `if` nào** ở cả
+> ba module.
+
+Ba file phải **giống hệt nhau**. Nếu lệch, nhãn giữa bước sinh ảnh và bước train
+CLIP sẽ không trùng nhau và không có gì báo lỗi — chỉ ra accuracy sai.
+`scripts/check_env.py` mục 4 kiểm tra đúng chuyện này.
+
+20 lớp đã chọn giữ **đúng thứ tự tương đối** của danh sách 100 lớp (vị trí
+`[0, 1, 3, 4, 5, 10, 13, 14, 17, 19, 25, 26, 28, 33, 35, 42, 47, 53, 95, 96]`),
+nên nhãn mới = vị trí trong danh sách 20. Cần cho mục 2.
+
+**Hệ quả quan trọng:** sau khi danh sách lớp đổi, mọi checkpoint LoRA và bộ ảnh
+sinh ra **trước đó đều hết dùng được**. Vì vậy phải chốt danh sách một lần, sớm,
+rồi không đổi nữa.
+
+---
+
+### 2. Tập test chưa có bộ lọc lớp — chưa ai nhận việc này
+
+Đây là vấn đề nghiêm trọng nhất và sẽ lộ ra muộn nhất (khoảng tuần 3, lúc TV4
+chạy số đầu tiên).
+
+- `classify/data.py:643` nạp tập test bằng
+  `tv.datasets.FGVCAircraft(split='test', annotation_level='variant')` →
+  **đủ 100 variant**, nhãn `0..99` theo thứ tự của torchvision.
+- `filter_dset()` (`classify/data.py:234`) chỉ giảm **số ảnh mỗi lớp**, hoàn toàn
+  không giảm số lớp.
+- `classify/main.py:68` lấy `n_classes = len(SUBSET_NAMES[dataset])` = 20.
+
+Kết quả: model có đầu ra 20 chiều nhưng nhận nhãn tới 99 → crash, hoặc tệ hơn là
+ra một con số accuracy vô nghĩa mà không ai nhận ra.
+
+**Phải viết thêm** một bước lọc tập test: giữ lại các mẫu có nhãn nằm trong 20 vị
+trí ở mục 1, rồi remap nhãn cũ → vị trí trong danh sách 20. Áp cho cả
+`get_test_dataset` và nhánh train ảnh thật (`classify/data.py:553`).
+
+**Chưa ai được phân công việc này.** Nó không nằm trong "4 chỗ phải sửa" của kế
+hoạch ban đầu, và nó là điều kiện để bước 3 chạy được.
+
+Phụ: `filter_dset()` dùng `random.sample` **không set seed**
+(`classify/data.py:263`), nên baseline ảnh thật không tái lập giữa các lần chạy.
+Nên nhận một `seed` và truyền vào.
+
+---
+
+### 3. K-shot của generator và của classifier không phải cùng một tập
+
+| nơi chọn K-shot | hành vi |
+|---|---|
+| `DataDream/datadream.py:214-217` | `os.listdir` → **`.sort(key=natural_keys)`** → lấy `[:n_shot]` |
+| `classify/data.py:118-125` | `os.listdir` → **không sort** → lấy `range(n_shot)` |
+
+Nghĩa là TV4 train trên K ảnh thật **khác** K ảnh mà Việt đã fine-tune LoRA, và
+kết quả còn không tái lập được giữa hai máy (thứ tự `os.listdir` phụ thuộc hệ
+thống tập tin).
+
+Sửa một dòng — thêm sort ngay sau `os.listdir` ở `classify/data.py:119`, dùng cùng
+`natural_keys` để hai bên khớp nhau:
+
+```python
+real_img_paths = os.listdir(ospj(real_train_fewshot_data_dir, class_name))
+real_img_paths.sort(key=natural_keys)
+```
+
+Phải sửa **trước khi TV4 chạy con số đầu tiên**, không thì mọi số đã chạy phải bỏ.
+
+Mặt tốt: phía generator có sort nên khẳng định "tập K-shot lồng nhau tự động" là
+**đúng** — cùng một thư mục 16 ảnh thì `--n_shot=1` và `--n_shot=4` tự là tập con
+của 16-shot.
+
+---
+
+## Mức CHẶN mình — sửa trước khi chạy
+
+### 4. `generate.py` lỗi dòng `assert` → không sinh được ảnh SD gốc
+
+`generate/generate.py:313`:
+
+```python
+assert mode == "datadream" and n_shot >= 1, \
+       "`n_shot` should be integer when `mode` is datadream."
+```
+
+Luôn fail khi `mode=zeroshot`. Sửa thành:
+
+```python
+assert mode != "datadream" or n_shot >= 1, \
+       "`n_shot` should be integer when `mode` is datadream."
+```
+
+### 5. `generate.py` truyền `revision="fp16"` cho model local
+
+`generate/generate.py:34` truyền `revision="fp16"` vào
+`StableDiffusionPipeline.from_pretrained`. Với thư mục local thì `revision`
+không có nghĩa và sẽ lỗi. Xóa hẳn dòng đó (`torch_dtype=torch.float16` ở dòng dưới
+đã đủ).
+
+### 6. Ghim phiên bản thư viện — bắt buộc, không phải cho đẹp
+
+Hai import của `DataDream/datadream.py` đã bị xóa khỏi bản mới của thư viện:
+
+| dòng | import | vỡ từ bản |
+|---|---|---|
+| `datadream.py:36` | `from diffusers.loaders import LoraLoaderMixin` | diffusers 0.30 |
+| `datadream.py:51` | `from huggingface_hub.utils import insecure_hashlib` | huggingface_hub 0.26 |
+
+Cộng với `check_min_version("0.26.0.dev0")` ở `datadream.py:67` → diffusers phải
+nằm trong khoảng **0.26–0.29**.
+
+> **Chỉ đổi tên lớp sang `StableDiffusionLoraLoaderMixin` là KHÔNG đủ.**
+> `datadream.py:537` còn giả định `lora_state_dict` trả về tuple
+> `(state_dict, network_alphas)`, và `save_lora_weights` (`:988`) cũng đổi chữ ký
+> ở bản mới. Lỗi sẽ nổ ở bước save/resume — tức là **sau khi đã train xong 4 tiếng**.
+
+Dùng `requirements-gen.txt` (đã ghim) thay vì `requirements.txt` của tác giả.
+`requirements.txt` không ghim gì cả và kéo theo `openai`, `langchain`,
+`google-cloud-aiplatform`, `gspread`, `oauth2client` — **không file `.py` nào trong
+repo import tới**, nhưng pip sẽ phải giải xung đột và rất dễ nâng diffusers lên bản
+làm code hỏng.
+
+### 7. `mixed_precision` mặc định là `None` — và nên dùng `bf16`, không phải `fp16`
+
+`DataDream/config.py:310` để `default=None`, nên không truyền cờ là chạy fp32:
+chậm hơn và tốn VRAM hơn nhiều.
+
+Nhưng nên truyền **`--mixed_precision=bf16`**, không phải `fp16`:
+
+- Code đã hỗ trợ sẵn (`datadream.py:441`).
+- Blackwell chạy bf16 nguyên tốc độ.
+- bf16 không cần loss scaling → loại hẳn nguyên nhân NaN / "ảnh sinh ra đen toàn
+  bộ" khi fine-tune cả text encoder, đúng sự cố mà kế hoạch đã dự báo.
+
+Chỉ dùng `fp16` nếu cần đối chiếu đúng nguyên setup của paper, và khi đó phải
+theo dõi loss xem có NaN.
+
+---
+
+## Mức nên sửa — tránh mất một đêm GPU
+
+### 8. `--checkpointing_steps=1000` vô dụng cho biến thể `cls`
+
+Mỗi LoRA của `cls` chỉ chạy **400 bước** (16 ảnh / batch 8 = 2 bước × 200 epoch),
+nên điều kiện `global_step % 1000 == 0` ở `datadream.py:841` **không bao giờ đúng**
+→ không có checkpoint nào được ghi → `--resume_from_checkpoint=latest` không dùng
+được cho đêm chạy 20 lớp, tức đêm nặng nhất.
+
+May là vòng `for` đã cho hạt resume tự nhiên (mất tối đa một lớp ≈ 13 phút). Chỉ
+cần bỏ qua lớp đã xong:
+
+```bash
+for i in $(seq 0 19); do
+  CKPT=$(ls outputs/fgvc_aircraft/shot16_seed0_tpl1/lr0.0001_epoch200/*/pytorch_lora_weights.safetensors 2>/dev/null | wc -l)
+  # hoac kiem tra truc tiep theo ten lop thu i
+  accelerate launch datadream.py ... --target_class_idx=$i || break
+done
+```
+
+Ngược lại, run `dset` (8.000 bước) lại ghi **8 checkpoint full optimizer state** vì
+`checkpoints_total_limit` mặc định `None` (`DataDream/config.py:163`). Thêm
+`--checkpoints_total_limit=1`.
+
+### 9. `--count_start` không phải cơ chế resume cho bước sinh ảnh
+
+`generate/generate.py:250-251` áp `count_start` cho **mọi lớp** trong lần chạy:
+
+```python
+count = self.count_start
+prompts = prompts[self.count_start:]
+```
+
+Nên nếu treo ở lớp thứ 12, chạy lại với `--count_start` sẽ sinh đè lên 11 lớp đã
+xong. Cách đúng: dùng `--n_set_split` / `--split_idx` để chạy lại đúng khối lớp
+còn thiếu, và chỉ dùng `count_start` cho một lớp bị dở.
+
+### 10. Sinh ảnh biến thể `cls` nạp lại toàn bộ pipeline 20 lần
+
+`generate/generate.py:400-402`: với `--is_dataset_wise_model=False`, mỗi lớp gọi
+lại `get_pipe()` từ đầu. Mặt tốt là không bị cộng dồn adapter LoRA; mặt dở là thêm
+~20 × 30–60 giây và dễ phân mảnh VRAM dần. Nên chạy theo `--n_set_split` thành vài
+khối thay vì một lần 20 lớp.
+
+---
+
+## Chi tiết cần sửa trong báo cáo
+
+### 11. `target_modules` của U-Net là 6 module, không phải 4
+
+`DataDream/datadream.py:475`:
+
+```python
+target_modules=["to_k", "to_q", "to_v", "to_out.0", "add_k_proj", "add_v_proj"]
+```
+
+Có thêm `add_k_proj` và `add_v_proj`. Text encoder thì đúng 4 như paper
+(`q_proj, k_proj, v_proj, out_proj`, dòng `:485`).
+
+### 12. Prompt thực tế có thêm tên miền
+
+Template đầu là `a {}photo of a {}` và chỗ `{}` đầu được điền `"aircraft "`
+(`generate/generate.py:116`), nên prompt thật là
+`"a aircraft photo of a 737-300"` — paper chỉ ghi gọn `"a photo of a [CLS]"`.
+
+### 13. Chỉ chạy một seed → bảng số không có thanh sai số
+
+Kế hoạch chỉ dùng `seed0` cho mọi biến thể, trong khi paper dùng nhiều fewshot
+seed. Nhóm sẽ phải bình luận về các con số lệch 1–2% mà không biết chúng có nằm
+trong nhiễu hay không.
+
+Rẻ nhất: chạy thêm `seed1` trên **EuroSAT** (nhẹ, đã có sẵn trong code) để có một
+ước lượng độ nhiễu, rồi ghi rõ hạn chế một-seed trong phần limitations.
+
+---
+
+## Những khẳng định đã kiểm tra là ĐÚNG
+
+Để không ai mất thời gian xác minh lại:
+
+- Compute hai biến thể bằng nhau: `dset` = 320 ảnh / batch 8 = 40 bước × 200 epoch
+  = **8.000 bước**; `cls` = 2 bước × 200 × 20 lớp = **8.000 bước**.
+- `rank` mặc định là 16 (`DataDream/config.py:352`), `lora_alpha = rank`,
+  `init_lora_weights="gaussian"` (`datadream.py:472-474`).
+- Không truyền `--target_class_idx` → train `dset`; truyền `=i` → train riêng lớp
+  thứ `i`.
+- Đường dẫn checkpoint **khớp chính xác** giữa hai bước: `datadream.py` ghi ra
+  `outputs/<dataset>/shot16_seed0_tpl1/lr0.0001_epoch200/<dataset-wise|tên lớp>/`
+  (`DataDream/config.py:372-390`) và `generate.py` đi tìm đúng đường đó
+  (`generate/generate.py:95-104`). Cả hai cùng thêm hậu tố `_notextlora` khi tắt
+  LoRA text encoder.
+- Ảnh sinh lưu ở
+  `<save_dir>/<dataset>/sd2.1/gs2.0_nis50/<cấu hình>/train/<tên lớp>/<số>.png`.
+- Dữ liệu few-shot phải nằm ở `<fewshot_data_dir>/seed0/<tên lớp>/` — code tự nối
+  `seed0/` vào (`DataDream/config.py:392-395`).
+- **Sinh ảnh SD gốc (`mode=zeroshot`) không cần dữ liệu thật.** `generate.py:315-321`
+  chỉ đọc `SUBSET_NAMES`, `model_dir` và `save_dir`. Nghĩa là bộ SD gốc chạy được
+  ngay khi chốt xong danh sách 20 lớp, **không phải chờ TV2** — tháo được mấy ngày
+  ra khỏi đường găng.
+- `classify/config.py:84` mở `"local.yaml"` bằng đường dẫn **tương đối** → bắt buộc
+  `cd classify` trước khi chạy. Hai bước kia cũng vậy.
+- `classify/main.py:11` `import wandb` là **vô điều kiện** (assert ở `:135` là code
+  chết), nên vẫn phải cài `wandb` dù chạy `--log=tensorboard`.

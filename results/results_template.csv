@@ -1,0 +1,2 @@
+run_name,dataset,variant,K,n_img,seed,setting,acc,date,commit,note
+aircraft20_dset_K16_n200,fgvc_aircraft,dset,16,200,0,clip-lora,,,,VÍ DỤ - xóa dòng này

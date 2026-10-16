@@ -1,0 +1,28 @@
+# Quang làm trên Windows, phần còn lại chạy trên WSL2 và Colab (Linux).
+# Không có file này, Git sẽ commit script bash với CRLF và trên Linux sẽ lỗi
+# "bash: \r: command not found" — rất khó đoán ra nguyên nhân.
+
+* text=auto eol=lf
+
+# Script bash BẮT BUỘC là LF
+*.sh text eol=lf
+
+# Code và cấu hình: LF
+*.py    text eol=lf
+*.yaml  text eol=lf
+*.yml   text eol=lf
+*.md    text eol=lf
+*.txt   text eol=lf
+*.csv   text eol=lf
+
+# Notebook: là JSON, để git xử lý như text nhưng đừng merge tự động
+*.ipynb text eol=lf merge=binary
+
+# Nhị phân: đừng đụng vào
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.safetensors binary
+*.pt    binary
+*.ckpt  binary
+*.zip   binary
