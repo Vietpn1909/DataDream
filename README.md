@@ -97,6 +97,7 @@ file mẫu giải thích từng key, kể cả mấy chỗ dễ sai:
 
 ```bash
 python scripts/check_env.py
+python scripts/test_kshot_consistency.py
 ```
 
 Chạy cái này trước khi báo "máy em xong rồi" — nó kiểm tra `sm_120`, phiên bản
@@ -133,21 +134,32 @@ dấu cách: `Cessna 172`, không phải `cessna_172`.
 
 ---
 
-## Việc phải làm trước khi chạy được với 20 lớp
+## Trạng thái các chỗ repo gốc chưa chạy được
 
-Repo gốc chưa dùng được ngay. Danh sách đầy đủ ở
-[docs/known-issues.md](docs/known-issues.md) — đọc trước khi chạy bất cứ thứ gì.
-Tóm tắt những chỗ **chặn người khác**:
+Danh sách đầy đủ 13 mục ở [docs/known-issues.md](docs/known-issues.md) — đọc
+trước khi chạy bất cứ thứ gì.
 
-1. **Cắt `SUBSET_NAMES['fgvc_aircraft']` xuống 20 lớp ở cả 3 module** — giữ
-   nguyên tên dataset là `fgvc_aircraft`, đừng tạo tên mới.
-2. **Tập test chưa có bộ lọc lớp.** `torchvision.datasets.FGVCAircraft` trả về
-   đủ 100 variant và `filter_dset()` chỉ giảm số ảnh mỗi lớp. Phải viết thêm
-   bộ lọc + remap nhãn, nếu không bước 3 sẽ crash hoặc ra số vô nghĩa.
-3. **`classify/data.py` chọn K-shot không sort** → tập K-shot của classifier
-   khác tập của generator. Sửa 1 dòng.
-4. **`generate.py` lỗi dòng `assert`** → không sinh được ảnh SD gốc.
-5. **`generate.py` truyền `revision="fp16"`** khi nạp model từ thư mục local.
+**Đã sửa:** cắt danh sách lớp xuống 20 ở cả 3 module; sort khi chọn K-shot và
+khi chọn ảnh sinh trong `classify/` (3 chỗ); dòng `assert` chặn `mode=zeroshot`;
+`revision="fp16"` khi nạp model local. Cộng `requirements-gen.txt` đã ghim
+phiên bản.
+
+**Còn tồn, và nó chặn bước 3:**
+
+> **Tập test chưa có bộ lọc lớp.** `classify/data.py:643` nạp tập test bằng
+> `torchvision.datasets.FGVCAircraft` → đủ **100 variant**, nhãn `0..99`, trong
+> khi `classify/main.py:68` lấy `n_classes = 20`. `filter_dset()` chỉ giảm số
+> ảnh mỗi lớp, không giảm số lớp. Phải viết thêm bộ lọc + remap nhãn, nếu không
+> bước 3 sẽ crash hoặc ra accuracy vô nghĩa mà không ai nhận ra.
+>
+> 20 lớp nằm ở các vị trí `[0, 1, 3, 4, 5, 10, 13, 14, 17, 19, 25, 26, 28, 33,
+> 35, 42, 47, 53, 95, 96]` trong danh sách 100 variant, và giữ đúng thứ tự
+> tương đối — nên nhãn mới = vị trí trong mảng đó. Chi tiết ở
+> [docs/known-issues.md](docs/known-issues.md) mục 2.
+
+**Cần lưu ý khi chạy, không phải sửa code:** dùng `--mixed_precision=bf16` chứ
+không phải `fp16`; `--checkpointing_steps=1000` vô dụng với biến thể `cls`;
+`--count_start` không phải cơ chế resume. Xem mục 7–10.
 
 ---
 

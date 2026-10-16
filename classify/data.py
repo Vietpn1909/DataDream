@@ -12,7 +12,7 @@ from torch.utils.data import Dataset
 import torchvision as tv
 from collections import defaultdict
 
-from utils import make_dirs
+from utils import make_dirs, natural_keys
 from util_data import (
     SUBSET_NAMES,
     configure_metadata, get_image_ids, get_class_labels,
@@ -122,6 +122,11 @@ class ImageNetDatasetFromMetadata(Dataset):
             for label, class_name in enumerate(SUBSET_NAMES[dataset]):
                 real_img_paths = os.listdir(
                     ospj(real_train_fewshot_data_dir, class_name))
+                # NHOM SUA: os.listdir khong dam bao thu tu, nen `range(n_shot)`
+                # ben duoi lay K anh TUY Y - khac may la khac tap, va khac tap
+                # ma buoc fine-tune LoRA da dung (DataDream/datadream.py:215
+                # sort bang dung natural_keys nay). Phai sort de hai ben khop.
+                real_img_paths.sort(key=natural_keys)
                 real_subset = [
                     ospj(
                         real_train_fewshot_data_dir, 
@@ -182,7 +187,15 @@ class DatasetSynthImage(Dataset):
         for label, class_name in enumerate(SUBSET_NAMES[dataset]):
             if target_label is not None and label != target_label:
                 continue
-            for fname in os.listdir(ospj(synth_train_data_dir, class_name)):
+            # NHOM SUA: them sorted(). Vong lap nay cat theo n_img_per_cls ben
+            # duoi, nen khong sort thi VIEC CHON anh sinh nao phu thuoc thu tu
+            # os.listdir -> moi may ra mot tap khac, va ablation "so anh moi
+            # lop" khong tai lap duoc. Sort thi n_img_per_cls nho luon la tap
+            # con cua n_img_per_cls lon, giong cach lay K-shot cua generator.
+            for fname in sorted(
+                os.listdir(ospj(synth_train_data_dir, class_name)),
+                key=natural_keys,
+            ):
                 if fname.endswith(".txt"):
                     continue
                 if fname.endswith(".json"):
@@ -203,6 +216,11 @@ class DatasetSynthImage(Dataset):
             for label, class_name in enumerate(SUBSET_NAMES[dataset]):
                 real_img_paths = os.listdir(
                     ospj(real_train_fewshot_data_dir, class_name))
+                # NHOM SUA: os.listdir khong dam bao thu tu, nen `range(n_shot)`
+                # ben duoi lay K anh TUY Y - khac may la khac tap, va khac tap
+                # ma buoc fine-tune LoRA da dung (DataDream/datadream.py:215
+                # sort bang dung natural_keys nay). Phai sort de hai ben khop.
+                real_img_paths.sort(key=natural_keys)
                 real_subset = [
                     ospj(
                         real_train_fewshot_data_dir, 

@@ -104,7 +104,13 @@ trước khi commit** — notebook kèm ảnh làm repo phình rất nhanh và d
 
 ```bash
 python scripts/check_env.py
+python scripts/test_kshot_consistency.py
 ```
+
+Cái thứ hai bắt buộc chạy nếu bạn sửa gì liên quan tới việc chọn ảnh — nó kiểm
+tra generator và classifier vẫn chọn cùng một tập K-shot. Lớp lỗi đó đã từng có
+thật trong repo gốc (xem [docs/known-issues.md](docs/known-issues.md) mục 3) và
+nó **không báo lỗi gì cả**, chỉ ra accuracy sai.
 
 Và với mỗi bộ dữ liệu bàn giao: đếm đủ số ảnh mỗi lớp, xem lưới một ảnh đại
 diện mỗi lớp, có `README.txt` kèm theo, tên zip đúng mẫu, giải nén thử ra đúng

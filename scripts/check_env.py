@@ -253,9 +253,23 @@ def check_classes():
 
 
 # ------------------------------------------------------------- patch da ap?
+def strip_comments(src):
+    """Bo phan comment cuoi dong, de khoi khop vao chinh comment giai thich patch.
+
+    Du thuat toan tho (khong hieu string co dau #), nhung du cho viec grep nay.
+    """
+    out = []
+    for line in src.splitlines():
+        stripped = line.lstrip()
+        if stripped.startswith("#"):
+            continue
+        out.append(line.split("  #")[0] if "  #" in line else line)
+    return "\n".join(out)
+
+
 def check_patches():
     head("5. Cac patch bat buoc")
-    gen = (ROOT / "generate" / "generate.py").read_text(encoding="utf-8")
+    gen = strip_comments((ROOT / "generate" / "generate.py").read_text(encoding="utf-8"))
 
     if re.search(r'assert\s+mode\s*==\s*"datadream"\s+and\s+n_shot\s*>=\s*1', gen):
         bad(
@@ -274,16 +288,47 @@ def check_patches():
     else:
         ok('da bo revision="fp16" trong get_pipe()')
 
-    src = (ROOT / "classify" / "data.py").read_text(encoding="utf-8")
-    m = re.search(r"real_img_paths\s*=\s*os\.listdir\(.*?\)(.*?)real_subset", src, re.S)
-    if m and ".sort(" not in m.group(1):
+    src = strip_comments(
+        (ROOT / "classify" / "data.py").read_text(encoding="utf-8")
+    )
+
+    # co HAI cho chon K-shot few-shot trong classify/data.py, phai sort ca hai
+    sites = re.findall(
+        r"real_img_paths\s*=\s*os\.listdir\(.*?\)(.*?)real_subset", src, re.S
+    )
+    if not sites:
+        warn("khong tim thay cho chon K-shot trong classify/data.py")
+    else:
+        unsorted = [i for i, body in enumerate(sites, 1) if ".sort(" not in body]
+        if unsorted:
+            bad(
+                "classify/data.py: " + str(len(unsorted)) + "/" + str(len(sites))
+                + " cho chon K-shot KHONG sort -> classifier train tren tap "
+                "K-shot khac tap generator da fine-tune",
+                "Them real_img_paths.sort(key=natural_keys) ngay sau os.listdir "
+                "o TAT CA cac cho (co 2 cho: fewshot thuan va is_pooled_fewshot).",
+            )
+        else:
+            ok("classify/data.py da sort ca " + str(len(sites)) + " cho chon K-shot")
+
+    # cho thu ba: duyet anh sinh roi cat theo n_img_per_cls
+    if re.search(r"for fname in os\.listdir\(ospj\(synth_train_data_dir", src):
         bad(
-            "classify/data.py chon K-shot khong sort -> classifier train tren "
-            "tap K-shot KHAC tap generator da fine-tune",
-            "Them real_img_paths.sort(key=natural_keys) ngay sau os.listdir.",
+            "classify/data.py duyet anh sinh khong sort -> viec CHON anh sinh "
+            "nao phu thuoc thu tu os.listdir, ablation so anh/lop khong tai lap",
+            "Boc trong sorted(..., key=natural_keys).",
         )
     else:
-        ok("classify/data.py da sort truoc khi lay K-shot")
+        ok("classify/data.py da sort khi duyet anh sinh")
+
+    utils_src = (ROOT / "classify" / "utils.py").read_text(encoding="utf-8")
+    if "def natural_keys" in utils_src:
+        ok("classify/utils.py co natural_keys (khop voi DataDream/util.py)")
+    else:
+        bad(
+            "classify/utils.py thieu natural_keys",
+            "Copy atoi/natural_keys tu DataDream/util.py sang, phai giong het.",
+        )
 
 
 # --------------------------------------------------------------------- main

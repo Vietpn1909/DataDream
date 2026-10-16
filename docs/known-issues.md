@@ -3,22 +3,36 @@
 Tất cả các mục dưới đây đã được **kiểm chứng trực tiếp trên code** trong repo này,
 không phải phỏng đoán. Số dòng tính theo commit gốc `a71515f`.
 
-Đọc hết mục 1–3 trước khi chạy bất cứ thứ gì, vì chúng **chặn người khác**, không
-chỉ chặn mình.
-
 Kiểm tra nhanh xem patch nào đã áp:
 
 ```bash
 python scripts/check_env.py
 ```
 
+## Trạng thái
+
+| # | Vấn đề | Trạng thái |
+|---|---|---|
+| 1 | Cắt danh sách lớp xuống 20 ở 3 module | ✅ đã sửa |
+| 2 | **Tập test chưa có bộ lọc lớp** | ❌ **CÒN — chặn bước 3** |
+| 3 | K-shot của classifier không sort (3 chỗ) | ✅ đã sửa |
+| 4 | `assert` chặn `mode=zeroshot` | ✅ đã sửa |
+| 5 | `revision="fp16"` với model local | ✅ đã sửa |
+| 6 | Ghim phiên bản thư viện | ✅ có `requirements-gen.txt` |
+| 7 | Nên dùng `bf16` thay `fp16` | ⚠️ chọn khi chạy, không phải sửa code |
+| 8–10 | Resume, `count_start`, reload pipeline | ⚠️ cần lưu ý khi chạy |
+| 11–13 | Chi tiết cho báo cáo | 📝 |
+
+**Mục 2 là việc duy nhất còn chặn người khác.** Nó cần code mới và nên có TV4 xác
+nhận, nên tách PR riêng.
+
 ---
 
 ## Mức CHẶN — phải xong trước khi nhóm chạy số
 
-### 1. Cắt danh sách lớp xuống 20 — làm ở cả 3 module, giữ nguyên tên dataset
+### 1. ✅ ĐÃ SỬA — cắt danh sách lớp xuống 20 ở cả 3 module
 
-`SUBSET_NAMES['fgvc_aircraft']` hiện có 100 variant, xuất hiện ở ba file:
+`SUBSET_NAMES['fgvc_aircraft']` trong repo gốc có 100 variant, ở ba file:
 
 | file | vị trí |
 |---|---|
@@ -26,8 +40,9 @@ python scripts/check_env.py
 | `generate/util.py` | ~dòng 250 |
 | `classify/util_data.py` | ~dòng 246 |
 
-**Cách làm: giữ nguyên tên `fgvc_aircraft`, chỉ cắt list xuống 20 dòng** theo
-`configs/classes_fgvc_aircraft20.txt`.
+**Cách đã làm: giữ nguyên tên `fgvc_aircraft`, cắt list xuống 20 dòng** theo
+`configs/classes_fgvc_aircraft20.txt`, dùng cùng một khối thay thế ở cả ba file nên
+ba diff giống hệt nhau.
 
 > **Đừng tạo tên dataset mới kiểu `fgvc_aircraft20`.** Nghe thì gọn hơn nhưng
 > tên mới sẽ rơi vào nhánh `else: raise ValueError` ở rất nhiều chỗ so chuỗi
@@ -52,7 +67,7 @@ rồi không đổi nữa.
 
 ---
 
-### 2. Tập test chưa có bộ lọc lớp — chưa ai nhận việc này
+### 2. ❌ CÒN TỒN — tập test chưa có bộ lọc lớp, chưa ai nhận việc này
 
 Đây là vấn đề nghiêm trọng nhất và sẽ lộ ra muộn nhất (khoảng tuần 3, lúc TV4
 chạy số đầu tiên).
@@ -80,26 +95,30 @@ Nên nhận một `seed` và truyền vào.
 
 ---
 
-### 3. K-shot của generator và của classifier không phải cùng một tập
+### 3. ✅ ĐÃ SỬA — K-shot của classifier không sort (hóa ra là **ba** chỗ)
 
-| nơi chọn K-shot | hành vi |
-|---|---|
-| `DataDream/datadream.py:214-217` | `os.listdir` → **`.sort(key=natural_keys)`** → lấy `[:n_shot]` |
-| `classify/data.py:118-125` | `os.listdir` → **không sort** → lấy `range(n_shot)` |
+Lúc viết mục này tôi tưởng chỉ có một chỗ. Khi sửa thì grep ra ba, và chỗ quan
+trọng nhất lại không phải chỗ đầu tiên:
 
-Nghĩa là TV4 train trên K ảnh thật **khác** K ảnh mà Việt đã fine-tune LoRA, và
-kết quả còn không tái lập được giữa hai máy (thứ tự `os.listdir` phụ thuộc hệ
-thống tập tin).
+| nơi | vai trò | trước khi sửa |
+|---|---|---|
+| `DataDream/datadream.py:214-217` | generator chọn K-shot | đã `.sort(key=natural_keys)` ✓ |
+| `classify/data.py:123` | few-shot thuần | `os.listdir` **không sort** |
+| `classify/data.py:204` | **`is_pooled_fewshot`** = ảnh sinh + K ảnh thật | `os.listdir` **không sort** |
+| `classify/data.py:185` | duyệt **ảnh sinh** rồi cắt theo `n_img_per_cls` | `os.listdir` **không sort** |
 
-Sửa một dòng — thêm sort ngay sau `os.listdir` ở `classify/data.py:119`, dùng cùng
-`natural_keys` để hai bên khớp nhau:
+Chỗ `classify/data.py:204` mới là setting chính của DataDream (ảnh sinh trộn với
+K ảnh thật), nên nó quan trọng hơn chỗ đầu.
 
-```python
-real_img_paths = os.listdir(ospj(real_train_fewshot_data_dir, class_name))
-real_img_paths.sort(key=natural_keys)
-```
+Chỗ `classify/data.py:185` là một ca cùng loại mà kế hoạch ban đầu không nhắc:
+vòng lặp này cắt theo `n_img_per_cls`, nên **việc chọn ảnh sinh nào** phụ thuộc
+thứ tự `os.listdir` → mỗi máy ra một tập khác, và **ablation "số ảnh mỗi lớp" của
+paper không tái lập được**. Sau khi sort thì `n_img_per_cls` nhỏ luôn là tập con
+của `n_img_per_cls` lớn, giống đúng cách generator lấy K-shot lồng nhau.
 
-Phải sửa **trước khi TV4 chạy con số đầu tiên**, không thì mọi số đã chạy phải bỏ.
+Cách sửa: thêm `atoi`/`natural_keys` vào `classify/utils.py` (bản sao y nguyên của
+`DataDream/util.py:18-30` — phải giống hệt, không thì hai bên lại lệch), rồi sort
+ở cả ba chỗ.
 
 Mặt tốt: phía generator có sort nên khẳng định "tập K-shot lồng nhau tự động" là
 **đúng** — cùng một thư mục 16 ảnh thì `--n_shot=1` và `--n_shot=4` tự là tập con
@@ -109,7 +128,7 @@ của 16-shot.
 
 ## Mức CHẶN mình — sửa trước khi chạy
 
-### 4. `generate.py` lỗi dòng `assert` → không sinh được ảnh SD gốc
+### 4. ✅ ĐÃ SỬA — `generate.py` lỗi dòng `assert`, không sinh được ảnh SD gốc
 
 `generate/generate.py:313`:
 
@@ -118,19 +137,19 @@ assert mode == "datadream" and n_shot >= 1, \
        "`n_shot` should be integer when `mode` is datadream."
 ```
 
-Luôn fail khi `mode=zeroshot`. Sửa thành:
+Luôn fail khi `mode=zeroshot`. Đã sửa thành:
 
 ```python
 assert mode != "datadream" or n_shot >= 1, \
        "`n_shot` should be integer when `mode` is datadream."
 ```
 
-### 5. `generate.py` truyền `revision="fp16"` cho model local
+### 5. ✅ ĐÃ SỬA — `generate.py` truyền `revision="fp16"` cho model local
 
 `generate/generate.py:34` truyền `revision="fp16"` vào
 `StableDiffusionPipeline.from_pretrained`. Với thư mục local thì `revision`
-không có nghĩa và sẽ lỗi. Xóa hẳn dòng đó (`torch_dtype=torch.float16` ở dòng dưới
-đã đủ).
+không có nghĩa và sẽ lỗi. Đã xóa hẳn dòng đó (`torch_dtype=torch.float16` ở dòng
+dưới đã đủ).
 
 ### 6. Ghim phiên bản thư viện — bắt buộc, không phải cho đẹp
 
