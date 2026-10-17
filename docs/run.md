@@ -179,23 +179,42 @@ Mỗi thư mục lớp có thêm `prompts.json`. Đóng gói và bàn giao theo 
 
 ## Chạy qua đêm
 
-**Trước khi đi ngủ:** tắt Sleep và tạm hoãn Windows Update — mất điện hay khởi động
-lại là mất cả đêm.
+Dùng hàng đợi — sửa danh sách `$jobs` ở đầu file cho đêm đó, rồi:
 
-**Nếu máy tắt giữa chừng:**
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\gpu_queue.ps1 -DryRun   # xem sẽ làm gì
+powershell -ExecutionPolicy Bypass -File scripts\gpu_queue.ps1
+```
 
-| Đang chạy | Cách tiếp tục |
-|---|---|
-| fine-tune dset | chạy lại lệnh cũ cộng `--resume_from_checkpoint=latest` (checkpoint mỗi 1.000 bước) |
-| fine-tune cls | chạy lại vòng lặp y nguyên — nó bỏ qua các lớp đã xong |
-| sinh ảnh | chạy lại đúng khối lớp còn thiếu bằng `--n_set_split` / `--split_idx` |
+Hàng đợi chạy lần lượt từng việc, dừng ngay nếu một việc lỗi, giữ máy không ngủ
+trong lúc chạy (không đổi cài đặt nguồn của máy), và ghi log cùng thời gian từng việc
+vào `outputs_logs/` — số liệu cho phần compute của báo cáo.
 
-Với sinh ảnh, **đừng dùng `--count_start`** để tiếp tục cả lần chạy: nó áp cho mọi
-lớp, nên sẽ sinh đè lên các lớp đã xong. Ví dụ 20 lớp với `--n_set_split=4`: mỗi
-khối 5 lớp, `--split_idx=2` sinh lại lớp 10–14.
+**Lỡ tắt máy giữa chừng: chạy lại đúng lệnh đó.** Hàng đợi tự tiếp tục:
 
-`--resume_from_checkpoint` không giúp được biến thể cls: mỗi lớp chỉ 400 bước, không
-bao giờ tới mốc 1.000 bước để ghi checkpoint. Vòng lặp bỏ-qua-lớp-đã-xong thay cho nó.
+| Việc đang dở | Mất gì | Hàng đợi làm gì khi chạy lại |
+|---|---|---|
+| sinh ảnh | lô 10 ảnh đang sinh; có thể một PNG ghi dở | bỏ qua lớp đã đủ ảnh; lớp dở thì sinh tiếp từ đúng ảnh còn thiếu; PNG hỏng bị phát hiện và xoá |
+| fine-tune | tối đa 1.000 bước (~12 phút) | thấy checkpoint thì tự thêm `--resume_from_checkpoint=latest` |
+| việc đã xong | không | bỏ qua |
+
+Nó còn từ chối chạy nếu đang có `generate.py` hay `datadream.py` khác chạy, để hai
+tiến trình không tranh GPU và ghi đè lên nhau.
+
+Windows Update tự khởi động lại máy thì hàng đợi vẫn dừng — tạm hoãn update trước
+những đêm chạy dài.
+
+### Nếu chạy tay, không dùng hàng đợi
+
+- **Fine-tune:** chạy lại **phải** thêm `--resume_from_checkpoint=latest`. Thiếu cờ
+  này thì không chỉ train lại từ đầu, mà tới bước 1.000 code còn **xoá checkpoint
+  cũ** (vì `--checkpoints_total_limit=1`) — mất thật.
+- **Sinh ảnh:** đừng thêm `--count_start` cho cả lần chạy — nó áp cho mọi lớp, nên
+  sinh đè lên lớp đã xong. Chỉ dùng cho **một lớp**: `--n_set_split=<số lớp>
+  --split_idx=<vị trí lớp> --count_start=<số ảnh đã có>`. Đây chính là cách hàng đợi
+  làm.
+- **cls:** `--resume_from_checkpoint` không giúp được — mỗi lớp chỉ 400 bước, không
+  bao giờ tới mốc 1.000 bước. Vòng lặp ở mục 1 tự bỏ qua lớp đã xong.
 
 **Sáng hôm sau, đếm ảnh mỗi lớp:**
 

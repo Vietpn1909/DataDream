@@ -78,7 +78,7 @@ generate/                   bước 2 — sinh ảnh
 classify/                   bước 3 — train CLIP
 configs/                    danh sách 20 lớp, mẫu local.yaml
 docs/                       tài liệu của nhóm
-scripts/                    dựng môi trường, tải model, kiểm tra
+scripts/                    dựng môi trường, tải model, kiểm tra, hàng đợi GPU
 results/                    bảng kết quả CSV, hình cho báo cáo
 notebooks/                  notebook Colab, mỗi người một file
 requirements-gen.lock.txt   môi trường bước 1–2 đã kiểm, cài qua setup_env.ps1
