@@ -15,14 +15,6 @@ import warnings
 from os.path import join as ospj
 from pathlib import Path
 
-# NHOM SUA: tu PyTorch 2.6, torch.load mac dinh weights_only=True. accelerate
-# 0.29.3 goi torch.load KHONG truyen weights_only khi --resume_from_checkpoint,
-# ma file trang thai co np.random.get_state() (mang numpy) -> resume crash.
-# Khong ha PyTorch duoc vi card Blackwell (sm_120) can PyTorch >= 2.7. Bien moi
-# truong nay khoi phuc hanh vi cu, chi o nhung cho KHONG truyen weights_only.
-# An toan vi ta chi nap checkpoint do chinh minh tao ra.
-os.environ.setdefault("TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD", "1")
-
 import diffusers
 import numpy as np
 import safetensors

@@ -337,17 +337,6 @@ def check_patches():
     else:
         ok("classify/data.py da sort khi duyet anh sinh")
 
-    dd = strip_comments((ROOT / "DataDream" / "datadream.py").read_text(encoding="utf-8"))
-    if "TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD" in dd:
-        ok("datadream.py da va resume cho PyTorch >= 2.6")
-    else:
-        bad(
-            "datadream.py chua va resume -> --resume_from_checkpoint se crash "
-            "voi PyTorch >= 2.6 (accelerate 0.29.3 goi torch.load khong co weights_only)",
-            'Them os.environ.setdefault("TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD", "1") '
-            "truoc khi import diffusers.",
-        )
-
     utils_src = (ROOT / "classify" / "utils.py").read_text(encoding="utf-8")
     if "def natural_keys" in utils_src:
         ok("classify/utils.py co natural_keys (khop voi DataDream/util.py)")

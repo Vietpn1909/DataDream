@@ -22,7 +22,7 @@ python scripts/check_env.py
 | 7 | Nên dùng `bf16` thay `fp16` | ⚠️ chọn khi chạy, không phải sửa code |
 | 8–10 | Resume, `count_start`, reload pipeline | ⚠️ cần lưu ý khi chạy |
 | 11–13 | Chi tiết cho báo cáo | 📝 |
-| 14 | `--resume_from_checkpoint` crash với PyTorch ≥ 2.6 | ✅ đã sửa |
+| 14 | Nghi `--resume_from_checkpoint` crash với PyTorch ≥ 2.6 | ✅ đã kiểm: không phải lỗi |
 | 15 | Model `stabilityai/stable-diffusion-2-1-base` đã bị gỡ | ✅ có `scripts/download_sd21.py` |
 
 **Mục 2 là việc duy nhất còn chặn người khác.** Nó cần code mới và nên có TV4 xác
@@ -239,29 +239,28 @@ khối thay vì một lần 20 lớp.
 
 ---
 
-### 14. ✅ ĐÃ SỬA — `--resume_from_checkpoint` crash với PyTorch ≥ 2.6
+### 14. ✅ KHÔNG PHẢI LỖI — đã kiểm thực tế, resume chạy được với PyTorch 2.11
 
-Phát hiện khi kiểm môi trường, không có trong kế hoạch ban đầu, và xảy ra **dù
-chạy Windows hay Linux**.
+**Nghi vấn ban đầu (từ đọc mã nguồn):** từ PyTorch 2.6, `torch.load` mặc định
+`weights_only=True`, trong khi accelerate 0.29.3 gọi `torch.load(...)` không truyền
+`weights_only` khi nạp trạng thái (`accelerate/checkpointing.py`), mà file
+`random_states_0.pkl` chứa `np.random.get_state()` — mảng numpy. Tưởng sẽ bị
+từ chối và resume crash.
 
-Từ PyTorch 2.6, `torch.load` mặc định `weights_only=True`. accelerate 0.29.3
-gọi `torch.load(...)` **không truyền `weights_only`** khi nạp trạng thái
-(`accelerate/checkpointing.py`, dòng 204–275 của bản 0.29.3), mà file
-`random_states_0.pkl` chứa `np.random.get_state()` — mảng numpy, bị bộ nạp
-`weights_only` từ chối → resume crash. Tức là đúng đêm máy tắt giữa chừng, lệnh
-phục hồi lại không chạy.
+**Kiểm thật thì không crash.** Trong venv (torch 2.11.0+cu128, accelerate
+0.29.3), một vòng `save_state` → `load_state` có đủ thành phần như
+`datadream.py` — scheduler cosine của diffusers, DataLoader xáo trộn, RNG numpy
+đã dùng, bf16 — nạp lại bình thường, LR trước và sau khớp nhau. PyTorch 2.11 đã
+cho phép mảng numpy trong chế độ `weights_only`.
 
-Không hạ PyTorch xuống dưới 2.6 được, vì card Blackwell (`sm_120`) cần PyTorch
-≥ 2.7. Nâng accelerate thì kéo theo phải nâng diffusers/transformers, mà diffusers
-≥ 0.30 làm vỡ `datadream.py` (mục 6).
+Bản vá `TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD` từng được thêm vào `datadream.py` đã
+**gỡ ra** — để lại một dòng code với comment mô tả lỗi không tồn tại thì tệ hơn
+không có.
 
-Cách sửa: đặt `TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD=1` ở đầu `DataDream/datadream.py`,
-trước khi import diffusers. Biến này (kiểm trên PyTorch 2.11, `torch/serialization.py`)
-khôi phục hành vi cũ **chỉ ở những chỗ không truyền `weights_only`** — đúng
-trường hợp của accelerate. An toàn vì ta chỉ nạp checkpoint do chính mình tạo.
-
-**Vẫn phải thử thật** trong lần chạy thử: train vài trăm bước với
-`--checkpointing_steps=100`, dừng giữa chừng, rồi chạy lại với
+`scripts/smoke_test_env.py` mục 5 giữ bài kiểm này, để nếu sau này nâng
+PyTorch/accelerate mà vỡ thì biết ngay. Vẫn nên thử resume bằng chính
+`datadream.py` trong lần chạy thử EuroSAT: train vài trăm bước với
+`--checkpointing_steps=100`, dừng giữa chừng, chạy lại với
 `--resume_from_checkpoint=latest`.
 
 ### 15. ✅ ĐÃ SỬA — model SD 2.1 gốc đã bị gỡ khỏi Hugging Face

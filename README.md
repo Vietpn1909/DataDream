@@ -35,42 +35,68 @@ mặc định, không tách đường dẫn bằng `/` cứng, không gọi lệ
 mặc định. Dưới Windows hay WSL thì GPU đều chạy qua cùng một driver Windows, nên
 tốc độ như nhau.
 
-**Phải dùng Python 3.10–3.12, không dùng 3.13+.** Bộ thư viện đã ghim (numpy
-1.26.4, tokenizers 0.15.2, safetensors 0.4.3, Pillow 10.3.0) không có bản cho
-3.13 trên Windows, pip sẽ cố build từ source rồi hỏng. Dùng
-[`uv`](https://docs.astral.sh/uv/) để tạo môi trường riêng với Python 3.11, venv
-nằm ngay trong repo (`.venv/`, đã có trong `.gitignore`):
+**Một lệnh dựng toàn bộ môi trường**, giống hệt bản đã kiểm chạy được:
 
 ```powershell
-cd D:\DataDream
-uv venv --python 3.11 .venv
-.venv\Scripts\activate
-uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
-uv pip install -r requirements-gen.txt
-accelerate config default
+powershell -ExecutionPolicy Bypass -File scripts\setup_env.ps1
 ```
 
-Nếu `.venv\Scripts\activate` báo *running scripts is disabled on this system*,
-chạy một lần lệnh dưới đây rồi thử lại. Nó chỉ cho phép script cục bộ của tài
-khoản bạn, không đổi gì cho cả máy:
+Cần có [`uv`](https://docs.astral.sh/uv/) và Python 3.11 (script tự tìm qua
+`py -3.11`). Thêm `-Force` để xoá `.venv` cũ và dựng lại. Script:
+
+1. Tạo venv ở `.venv/` (đã có trong `.gitignore`) từ Python 3.11 sẵn có, cấm `uv`
+   tự tải Python.
+2. Cài **đúng 45 gói** trong `requirements-gen.lock.txt` — lock sinh từ venv đã kiểm,
+   không giải phụ thuộc lại từ đầu.
+3. Đặt cache của `uv` **bên trong venv** (cùng ổ đĩa → hardlink, mỗi file chỉ chiếm
+   chỗ một lần), và thêm `sitecustomize.py` trỏ `HF_HOME` vào `.venv\hf-home`.
+   Kết quả: **không cài gì vào Python hệ thống, không ghi gì ra
+   `~/.cache/huggingface`** — xoá `.venv` là sạch.
+4. `uv pip check` để bắt xung đột phụ thuộc.
+5. Chạy `scripts/smoke_test_env.py` trên GPU (xem dưới).
+
+**Phải dùng Python 3.10–3.12, không dùng 3.13+.** Bộ thư viện đã ghim (numpy
+1.26.4, tokenizers 0.15.2, safetensors 0.4.3, Pillow 10.3.0) không có bản cho
+3.13 trên Windows.
+
+**Đừng cài theo kiểu hai bước** (`pip install torch` rồi `pip install -r
+requirements-gen.txt`): bước đầu kéo numpy 2.x về, bước sau phải hạ xuống, và dễ bị
+torch bản CPU từ PyPI đè lên. Lock giải một lần cho cả 45 gói. Cách sinh lock và
+lý do dùng `--index-strategy unsafe-best-match` có ghi trong
+`scripts/setup_env.ps1`.
+
+Kích hoạt venv để làm việc:
+
+```powershell
+.venv\Scripts\activate
+```
+
+Nếu báo *running scripts is disabled on this system*, chạy một lần lệnh dưới đây
+rồi thử lại. Nó chỉ cho phép script cục bộ của tài khoản bạn:
 
 ```powershell
 Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 ```
 
-Index `cu128` là bắt buộc với card RTX 50xx. Kiểm tra ngay:
-
-```powershell
-python -c "import torch; print(torch.__version__, torch.cuda.is_available(), torch.cuda.get_device_name(0)); print(torch.cuda.get_arch_list())"
-```
-
-Phải thấy `True` và **`sm_120` trong danh sách kiến trúc**. Không có là bản torch
-chưa hỗ trợ card, mọi bước sau sẽ lỗi `no kernel image is available`. Lỗi hay
-gặp nhất là `pip install -r requirements-gen.txt` tự kéo torch bản CPU từ PyPI
-đè lên — khi đó `is_available()` ra `False`, cài lại torch từ index `cu128`.
+Không cần `accelerate config default`: với một GPU, `accelerate launch` tự dùng
+một tiến trình, còn mixed precision truyền bằng `--mixed_precision` của script.
 
 Trong VS Code: `Ctrl+Shift+P` → *Python: Select Interpreter* → chọn
 `.venv\Scripts\python.exe`, để hết báo đỏ "Cannot find module".
+
+#### Hai bộ kiểm tra — khác nhau thế nào
+
+| | `check_env.py` | `smoke_test_env.py` |
+|---|---|---|
+cách kiểm | đọc tĩnh mã nguồn và phiên bản | **chạy thật trên GPU** |
+cần torch? | không — chạy được ở mọi nơi | có |
+bắt được | quên áp patch, `local.yaml` thiếu, danh sách lớp lệch | thư viện cũ vỡ khi ghép với PyTorch mới, thiếu `sm_120` |
+thời gian | < 1 giây | ~20 giây |
+
+`smoke_test_env.py` dựng UNet và text encoder **tí hon từ config** (không cần tải
+model) rồi đi đúng chuỗi gọi hàm của `datadream.py`: gắn LoRA → train một bước bf16
+→ lưu → nạp lại → so từng bit, cộng thêm một vòng `save_state`/`load_state` của
+accelerate. Chạy lại mỗi khi đổi phiên bản thư viện nào.
 
 Trên Windows, vòng lặp 20 lớp của biến thể `cls` viết bằng PowerShell thay vì
 bash:
