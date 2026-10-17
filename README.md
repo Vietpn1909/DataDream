@@ -50,9 +50,14 @@ Chi tiết và lỗi hay gặp: [docs/setup.md](docs/setup.md). Lệnh fine-tune
 
 ## Việc còn mở
 
-> **Tập test chưa được lọc về 20 lớp.** Bước 3 sẽ crash hoặc ra accuracy vô nghĩa
-> cho tới khi việc này xong, và chưa có người nhận. Xem
-> [docs/known-issues.md](docs/known-issues.md), mục 2.
+> Hai lỗi trong code đánh giá của bước 3 (`classify/data.py`), chưa có người nhận.
+> Cả hai không báo lỗi gì, chỉ cho ra accuracy sai — phải sửa trước khi chạy số đầu
+> tiên:
+>
+> - **Tập test Aircraft chưa được lọc về 20 lớp** — code tự tải đủ 100 loại máy bay.
+>   [known-issues.md, mục 2](docs/known-issues.md).
+> - **Tập test EuroSAT thực ra là tập train** — accuracy EuroSAT bị thổi phồng.
+>   [known-issues.md, mục 17](docs/known-issues.md).
 
 ## Tài liệu
 
