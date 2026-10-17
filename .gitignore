@@ -1,10 +1,47 @@
+# ---- Dữ liệu, ảnh sinh, checkpoint: KHÔNG commit, để trên Drive chung ----
+data/
+synthetic/
+outputs/
+outputs*/
+*.safetensors
+*.ckpt
+*.pt
+*.pth
+*.zip
+*.tar
+*.tar.gz
+*.npy
+*.png
+*.jpg
+*.jpeg
+*.JPEG
+!figures/*.png
+!results/figures/**
+!results/figures/*.png
 
-DataDream/__pycache__
-DataDream/outputs*
+# ---- Log huấn luyện ----
+runs/
+wandb/
+mlruns/
+lightning_logs/
+events.out.tfevents.*
 
-generate/__pycache__
+# ---- Cấu hình đường dẫn riêng của từng máy (copy từ configs/local.example.yaml) ----
+DataDream/local.yaml
+generate/local.yaml
+classify/local.yaml
 
-classify/__pycache__
-classify/models/__pycache__
-classify/outputs*
-classify/wandb
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.ipynb_checkpoints/
+
+# ---- Hệ điều hành / IDE ----
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

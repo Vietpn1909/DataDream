@@ -29,9 +29,12 @@ def get_pipe(model_type, model_dir, device, is_tqdm):
     from diffusers import DiffusionPipeline, StableDiffusionPipeline
 
     if model_type not in ("sdxl1.0",):
+        # NHOM SUA: bo `revision="fp16"`. `revision` la ten branch/tag tren
+        # Hugging Face Hub, khong co nghia khi nap tu thu muc local (model_dir)
+        # va se lam from_pretrained bao loi. `torch_dtype` duoi day da du de
+        # chay fp16.
         pipe = StableDiffusionPipeline.from_pretrained(
             model_dir,
-            revision="fp16",
             torch_dtype=torch.float16,
         )
     else:
@@ -310,7 +313,10 @@ def main(
         n_shot = int(n_shot)
 
     assert mode in ("zeroshot", "datadream"), "Wrong `mode` argument."
-    assert mode == "datadream" and n_shot >= 1, \
+    # NHOM SUA: dong assert goc la `mode == "datadream" and n_shot >= 1`, nen no
+    # LUON fail khi mode=zeroshot - tuc khong sinh duoc bo anh SD goc. Y dinh
+    # ban dau la "neu la datadream thi n_shot phai >= 1", tuc phep keo theo:
+    assert mode != "datadream" or n_shot >= 1, \
            "`n_shot` should be integer when `mode` is datadream."
     if mode == "zeroshot":
         n_shot = 0

@@ -1,0 +1,89 @@
+# ============================================================================
+# MẪU CẤU HÌNH ĐƯỜNG DẪN - KHÔNG SỬA FILE NÀY
+#
+# File này gộp nội dung của 3 file local.yaml mà code cần. Mỗi người copy ra
+# đúng 3 file dưới đây rồi điền đường dẫn TUYỆT ĐỐI của máy mình. Ba file đó
+# đã nằm trong .gitignore nên không bao giờ bị commit.
+#
+#   cp configs/local.example.yaml DataDream/local.yaml
+#   cp configs/local.example.yaml generate/local.yaml
+#   cp configs/local.example.yaml classify/local.yaml
+#
+# Mỗi file chỉ đọc những key nó cần, nên để nguyên cả 3 khối cũng chạy được.
+# ============================================================================
+
+
+# ---------------------------------------------------------------------------
+# [1] DataDream/local.yaml  -- bước fine-tune LoRA (datadream.py)
+# ---------------------------------------------------------------------------
+# Code tự nối thêm "<fewshot_seed>/" vào sau đường dẫn này, nên ảnh thật phải
+# nằm ở:  <fewshot_data_dir>/seed0/<tên lớp>/<file ảnh>
+# Tên thư mục lớp phải khớp TỪNG KÝ TỰ với SUBSET_NAMES trong
+# DataDream/util_data.py (xem configs/classes_fgvc_aircraft20.txt).
+fewshot_data_dir:
+    fgvc_aircraft: /home/USER/data/fgvc_aircraft/real_train_fewshot
+    eurosat: /home/USER/data/eurosat/real_train_fewshot
+
+
+# ---------------------------------------------------------------------------
+# [2] generate/local.yaml  -- bước sinh ảnh (generate.py)
+# ---------------------------------------------------------------------------
+# save_dir:      nơi ghi ảnh sinh ra (cần nhiều chục GB trống)
+# datadream_dir: PHẢI trỏ vào --output_dir của bước fine-tune, tức là thư mục
+#                chứa <dataset>/shot16_seed0_tpl1/..., thường là
+#                <repo>/DataDream/outputs
+save_dir: /home/USER/synthetic
+datadream_dir: /home/USER/datadream-reproduce/DataDream/outputs
+
+
+# ---------------------------------------------------------------------------
+# [3] classify/local.yaml  -- bước train CLIP (TV4, TV5)
+# ---------------------------------------------------------------------------
+# LƯU Ý: classify/config.py đọc CẢ 7 key dưới đây vô điều kiện, thiếu một key
+# là KeyError ngay khi khởi động -> phải điền đủ, kể cả khi không dùng wandb.
+# Thêm nữa, classify/config.py mở "local.yaml" bằng đường dẫn TƯƠNG ĐỐI,
+# nên bắt buộc `cd classify` trước khi chạy main.py.
+#
+# Chú ý tên key ở đây là real_train_fewshot_data_dir, KHÁC với key
+# fewshot_data_dir của khối [1]. Hai bên phải trỏ về CÙNG một thư mục,
+# nếu lệch là classifier train trên tập few-shot khác tập đã fine-tune LoRA.
+
+# Chỉ dùng khi chạy với --log=wandb. Dùng tensorboard thì để nguyên chuỗi dưới.
+# TUYỆT ĐỐI không điền key thật rồi commit - file local.yaml đã bị gitignore,
+# nhưng đừng dán key vào notebook hay vào file nào khác trong repo.
+wandb_key: UNUSED_IF_LOG_IS_TENSORBOARD
+
+# Thư mục metadata có sẵn trong repo (classify/metadata/...). Đường dẫn tương
+# đối tính từ thư mục classify/.
+metadata_dir: metadata/imagenet
+
+# Nơi cache checkpoint CLIP tải từ OpenAI.
+clip_download_dir: /home/USER/models/clip
+
+# Gốc thư mục ảnh sinh - trỏ vào ĐÚNG save_dir của khối [2] (hoặc vào bản đã
+# giải nén từ Drive). Code tự nối tiếp <dataset>/<sd_version>/... vào sau.
+synth_train_data_dir: /home/USER/synthetic
+
+real_train_data_dir:
+    fgvc_aircraft: /home/USER/data/fgvc_aircraft
+    eurosat: /home/USER/data/eurosat
+
+real_test_data_dir:
+    fgvc_aircraft: /home/USER/data/fgvc_aircraft
+    eurosat: /home/USER/data/eurosat
+
+# Code tự nối thêm "<fewshot_seed>/" vào sau, giống khối [1].
+real_train_fewshot_data_dir:
+    fgvc_aircraft: /home/USER/data/fgvc_aircraft/real_train_fewshot
+    eurosat: /home/USER/data/eurosat/real_train_fewshot
+
+
+# ---------------------------------------------------------------------------
+# [chung] Dùng bởi cả 3 file: thư mục chứa Stable Diffusion 2.1 base (512)
+# ---------------------------------------------------------------------------
+# Tải bằng:
+#   huggingface-cli download stabilityai/stable-diffusion-2-1-base \
+#       --local-dir ~/models/sd2.1-base
+# Phải là bản "-base" (512) vì code fine-tune ở độ phân giải 512.
+model_dir:
+    sd2.1: /home/USER/models/sd2.1-base

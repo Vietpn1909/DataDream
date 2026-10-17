@@ -15,6 +15,7 @@ import datetime
 import json
 import os
 import random
+import re
 import sys
 import time
 from collections import defaultdict, deque
@@ -56,6 +57,23 @@ unnorm = UnNormalize()
 def make_dirs(fpath_dir):
     if not os.path.exists(fpath_dir):
         os.makedirs(fpath_dir)
+
+
+# NHOM THEM: ban sao y nguyen cua atoi/natural_keys trong DataDream/util.py.
+# Phai GIONG HET ben do, vi buoc fine-tune LoRA chon K anh few-shot bang
+# `images_path.sort(key=natural_keys)` roi lay K dau. Neu classify sort kieu
+# khac thi classifier se train tren mot tap K-shot KHAC tap da fine-tune, va
+# khong co gi bao loi.
+def atoi(text):
+    return int(text) if text.isdigit() else text
+
+
+def natural_keys(text):
+    """Sort "human order": 'img2' < 'img10'.
+
+    Usage:  alist.sort(key=natural_keys)
+    """
+    return [atoi(c) for c in re.split(r"(\d+)", text)]
 
 
 def fix_random_seeds(seed=22):

@@ -1,0 +1,53 @@
+# 20 lớp FGVC-Aircraft dùng cho bài này.
+#
+# Mỗi dòng (không phải dòng chú thích) là MỘT tên lớp, và phải khớp TỪNG KÝ TỰ
+# với tên thư mục ảnh thật:  <fewshot_data_dir>/seed0/<tên lớp>/
+# Cả 20 tên dưới đây đã được kiểm tra là có mặt nguyên văn trong
+# SUBSET_NAMES['fgvc_aircraft'] (100 lớp) của repo gốc.
+#
+# Vì sao chọn bộ này:
+#   - Có các cặp cực giống nhau (737-300/400/500, A320/A321) để thể hiện
+#     tính fine-grained của bài toán.
+#   - Có Spitfire và 747-100 để so trực tiếp với Figure 3 và Figure 7 của paper.
+#   - Tránh F-16A/B và F/A-18: dấu "/" không đặt được làm tên thư mục.
+#
+# QUAN TRỌNG - cách áp dụng vào code: KHÔNG tạo tên dataset mới
+# ("fgvc_aircraft20"). Giữ nguyên tên "fgvc_aircraft" và cắt
+# SUBSET_NAMES['fgvc_aircraft'] xuống đúng 20 dòng này ở cả 3 file:
+#     DataDream/util_data.py   (~dòng 231)
+#     generate/util.py         (~dòng 250)
+#     classify/util_data.py    (~dòng 246)
+# Cách này khỏi phải sửa một từ điển tên miền hay một nhánh `if dataset ==`
+# nào trong cả 3 module. Nếu đổi tên dataset thì phải sửa thêm ~6 chỗ nữa
+# bên classify/ và TV4 sẽ bị chặn.
+#
+# CÒN TỒN: tập test nạp qua torchvision FGVCAircraft với đủ 100 variant, và
+# filter_dset() chỉ giảm số ảnh mỗi lớp chứ không giảm số lớp. Phải viết thêm
+# bộ lọc lớp + remap nhãn cho tập test trước khi TV4 chạy số. Xem issue.
+#
+# Để tiện cho việc remap đó: 20 lớp này nằm ở các vị trí sau trong danh sách
+# 100 variant gốc (cũng là thứ tự nhãn của torchvision.datasets.FGVCAircraft),
+# và đã được kiểm tra là GIỮ ĐÚNG thứ tự tương đối, nên nhãn mới = vị trí
+# trong mảng này:
+#   [0, 1, 3, 4, 5, 10, 13, 14, 17, 19, 25, 26, 28, 33, 35, 42, 47, 53, 95, 96]
+
+707-320
+727-200
+737-300
+737-400
+737-500
+747-100
+747-400
+757-200
+767-300
+777-200
+A320
+A321
+A330-300
+A380
+ATR-72
+C-130
+Cessna 172
+DC-3
+Spitfire
+Tornado

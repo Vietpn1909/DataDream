@@ -1,0 +1,9 @@
+# Mọi PR vào master phải được Việt duyệt.
+#
+# Có tác dụng khi bảo vệ nhánh master bật "Require review from Code Owners"
+# (Settings -> Branches). GitHub không cho tự duyệt PR của mình, nên PR từ
+# nhánh `viet` sẽ do Việt merge bằng quyền admin.
+#
+# Muốn PR của Việt cũng có người xem thì thêm một người nữa vào dòng dưới,
+# ví dụ:  * @Vietpn1909 @<github-cua-TV5>
+* @Vietpn1909

@@ -243,28 +243,25 @@ SUBSET_NAMES = {
         'sushi', 'tacos', 'takoyaki', 'tiramisu', 'tuna_tartare',
         'waffles'
     ],
+    # NHOM SUA: cat tu 100 variant goc xuong 20 lop dung trong bai.
+    # Danh sach chot o configs/classes_fgvc_aircraft20.txt. BA file
+    # DataDream/util_data.py, generate/util.py va classify/util_data.py phai
+    # GIONG HET NHAU - neu lech, nhan giua buoc sinh anh va buoc train CLIP se
+    # khong trung nhau va KHONG CO GI BAO LOI, chi ra accuracy sai.
+    # Kiem tra bang: python scripts/check_env.py
+    #
+    # 20 lop nay giu dung thu tu tuong doi cua danh sach 100 variant goc, nam o
+    # cac vi tri sau (cung la nhan cua torchvision.datasets.FGVCAircraft):
+    #   [0, 1, 3, 4, 5, 10, 13, 14, 17, 19, 25, 26, 28, 33, 35, 42, 47, 53, 95, 96]
+    # Can mang nay de loc + remap nhan TAP TEST, viec do CHUA LAM
+    # (xem docs/known-issues.md muc 2) - tap test hien van nap du 100 variant.
     'fgvc_aircraft': [
-        '707-320', '727-200', '737-200', '737-300', '737-400',
-        '737-500', '737-600', '737-700', '737-800', '737-900',
-        '747-100', '747-200', '747-300', '747-400', '757-200',
-        '757-300', '767-200', '767-300', '767-400', '777-200',
-        '777-300', 'A300B4', 'A310', 'A318', 'A319',
-        'A320', 'A321', 'A330-200', 'A330-300', 'A340-200',
-        'A340-300', 'A340-500', 'A340-600', 'A380', 'ATR-42',
-        'ATR-72', 'An-12', 'BAE 146-200', 'BAE 146-300', 'BAE-125',
-        'Beechcraft 1900', 'Boeing 717', 'C-130', 'C-47', 'CRJ-200',
-        'CRJ-700', 'CRJ-900', 'Cessna 172', 'Cessna 208', 'Cessna 525',
-        'Cessna 560', 'Challenger 600', 'DC-10', 'DC-3', 'DC-6',
-        'DC-8', 'DC-9-30', 'DH-82', 'DHC-1', 'DHC-6',
-        'DHC-8-100', 'DHC-8-300', 'DR-400', 'Dornier 328', 'E-170',
-        'E-190', 'E-195', 'EMB-120', 'ERJ 135', 'ERJ 145',
-        'Embraer Legacy 600', 'Eurofighter Typhoon', 'F-16A/B', 'F/A-18', 'Falcon 2000',
-        'Falcon 900', 'Fokker 100', 'Fokker 50', 'Fokker 70', 'Global Express',
-        'Gulfstream IV', 'Gulfstream V', 'Hawk T1', 'Il-76', 'L-1011',
-        'MD-11', 'MD-80', 'MD-87', 'MD-90', 'Metroliner',
-        'Model B200', 'PA-28', 'SR-20', 'Saab 2000', 'Saab 340',
-        'Spitfire', 'Tornado', 'Tu-134', 'Tu-154', 'Yak-42'
+        '707-320', '727-200', '737-300', '737-400', '737-500',
+        '747-100', '747-400', '757-200', '767-300', '777-200',
+        'A320', 'A321', 'A330-300', 'A380', 'ATR-72',
+        'C-130', 'Cessna 172', 'DC-3', 'Spitfire', 'Tornado'
     ],
+
     'eurosat': [
         'AnnualCrop', 'Forest', 'HerbaceousVegetation', 'Highway', 'Industrial',
         'Pasture', 'PermanentCrop', 'Residential', 'River', 'SeaLake'
