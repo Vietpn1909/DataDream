@@ -18,9 +18,14 @@ thẳng vào nó.
 | TV4 | `tv4` | train CLIP |
 | TV5 | `tv5` | ablation, ghép báo cáo |
 
-Làm xong một việc thì mở Pull Request từ nhánh của mình vào `master`, **1 người
-duyệt**, rồi merge. Sau khi merge vẫn làm tiếp trên cùng nhánh đó — nhánh là của
-người, không phải của việc.
+Làm xong một việc thì mở Pull Request từ nhánh của mình vào `master`. **PR phải
+được Việt duyệt** mới merge được — GitHub tự chặn, theo file
+`.github/CODEOWNERS`. Sau khi merge vẫn làm tiếp trên cùng nhánh đó — nhánh là
+của người, không phải của việc.
+
+Repo chỉ cho **merge commit** (đã tắt squash và rebase). Lý do: với nhánh dùng
+lâu, squash/rebase tạo commit mới trên `master` trong khi nhánh của bạn vẫn giữ
+commit cũ, nên PR sau sẽ hiện lại những gì đã merge và hay conflict.
 
 Vì nhánh sống lâu, hai điều phải giữ:
 
