@@ -1,3 +1,8 @@
+> **Ghi chú của nhóm:** đây là README gốc của tác giả, giữ để tham khảo. Nhóm sinh
+> 200 ảnh mỗi lớp (không phải 500), và phải giữ `--n_set_split=1 --split_idx=0` —
+> mặc định `n_set_split=5` chỉ sinh 1/5 số lớp. Lệnh theo cấu hình của nhóm ở
+> [docs/run.md](../docs/run.md#2-sinh-ảnh).
+
 #### We assume to have DataDream checkpoints. In this step, we generate synthetic images with DataDream model.
 
 ## Setup

@@ -1,13 +1,13 @@
 # ============================================================================
 # MẪU CẤU HÌNH ĐƯỜNG DẪN - KHÔNG SỬA FILE NÀY
 #
-# File này gộp nội dung của 3 file local.yaml mà code cần. Mỗi người copy ra
-# đúng 3 file dưới đây rồi điền đường dẫn TUYỆT ĐỐI của máy mình. Ba file đó
-# đã nằm trong .gitignore nên không bao giờ bị commit.
+# File này gộp nội dung của 3 file local.yaml mà code cần. Tạo cả 3 bằng:
 #
-#   cp configs/local.example.yaml DataDream/local.yaml
-#   cp configs/local.example.yaml generate/local.yaml
-#   cp configs/local.example.yaml classify/local.yaml
+#   python scripts/setup_local_yaml.py
+#
+# (copy file này ra DataDream/, generate/, classify/, không ghi đè file đã có)
+# rồi điền đường dẫn TUYỆT ĐỐI của máy mình. Ba file đó đã nằm trong
+# .gitignore nên không bao giờ bị commit.
 #
 # Mỗi file chỉ đọc những key nó cần, nên để nguyên cả 3 khối cũng chạy được.
 #
