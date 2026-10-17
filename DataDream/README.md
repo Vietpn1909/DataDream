@@ -1,3 +1,8 @@
+> **Ghi chú của nhóm:** đây là README gốc của tác giả, giữ để tham khảo. Lệnh bên
+> dưới viết cho bash, không có `--mixed_precision` (tức chạy fp32) và thiếu
+> `--checkpoints_total_limit`. Lệnh theo cấu hình của nhóm (PowerShell, bf16, 20
+> lớp, vòng lặp cls tự bỏ qua lớp đã xong) ở [docs/run.md](../docs/run.md).
+
 #### In this step, we finetune a Stable Diffusion model with few-shots.
 
 ## Setup

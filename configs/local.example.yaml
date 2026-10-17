@@ -1,15 +1,18 @@
 # ============================================================================
 # MẪU CẤU HÌNH ĐƯỜNG DẪN - KHÔNG SỬA FILE NÀY
 #
-# File này gộp nội dung của 3 file local.yaml mà code cần. Mỗi người copy ra
-# đúng 3 file dưới đây rồi điền đường dẫn TUYỆT ĐỐI của máy mình. Ba file đó
-# đã nằm trong .gitignore nên không bao giờ bị commit.
+# File này gộp nội dung của 3 file local.yaml mà code cần. Tạo cả 3 bằng:
 #
-#   cp configs/local.example.yaml DataDream/local.yaml
-#   cp configs/local.example.yaml generate/local.yaml
-#   cp configs/local.example.yaml classify/local.yaml
+#   python scripts/setup_local_yaml.py
+#
+# (copy file này ra DataDream/, generate/, classify/, không ghi đè file đã có)
+# rồi điền đường dẫn TUYỆT ĐỐI của máy mình. Ba file đó đã nằm trong
+# .gitignore nên không bao giờ bị commit.
 #
 # Mỗi file chỉ đọc những key nó cần, nên để nguyên cả 3 khối cũng chạy được.
+#
+# Trên Windows: viết đường dẫn bằng dấu / (D:/DataDream/data/eurosat). Dấu \
+# vẫn chạy nếu không đặt trong ngoặc kép, nhưng / thì khỏi phải nghĩ.
 # ============================================================================
 
 
@@ -33,7 +36,7 @@ fewshot_data_dir:
 #                chứa <dataset>/shot16_seed0_tpl1/..., thường là
 #                <repo>/DataDream/outputs
 save_dir: /home/USER/synthetic
-datadream_dir: /home/USER/datadream-reproduce/DataDream/outputs
+datadream_dir: /home/USER/DataDream/DataDream/outputs
 
 
 # ---------------------------------------------------------------------------
@@ -81,9 +84,8 @@ real_train_fewshot_data_dir:
 # ---------------------------------------------------------------------------
 # [chung] Dùng bởi cả 3 file: thư mục chứa Stable Diffusion 2.1 base (512)
 # ---------------------------------------------------------------------------
-# Tải bằng:
-#   huggingface-cli download stabilityai/stable-diffusion-2-1-base \
-#       --local-dir ~/models/sd2.1-base
+# Tải bằng:  python scripts/download_sd21.py
+# (repo stabilityai gốc đã bị gỡ khỏi Hugging Face - script dùng bản mirror)
 # Phải là bản "-base" (512) vì code fine-tune ở độ phân giải 512.
 model_dir:
     sd2.1: /home/USER/models/sd2.1-base

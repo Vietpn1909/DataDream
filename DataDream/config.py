@@ -366,8 +366,12 @@ def parse_args(input_args=None):
     args_local = set_local()
     if args.pretrained_model_name_or_path is None:
         args.pretrained_model_name_or_path = args_local["model_dir"]["sd2.1"]
+    # NHOM SUA: ban goc viet `args_n_template = 1` (gach duoi) - gan vao bien rac,
+    # nen mac dinh nay khong bao gio co hieu luc. Quen --n_template thi
+    # TEMPLATES_SMALL[:None] lay ca 27 template de train, va checkpoint nam o
+    # ".../tplNone/" trong khi generate.py tim ".../tpl1/".
     if args.n_template is None:
-        args_n_template = 1
+        args.n_template = 1
 
     mid1 = f"shot{args.n_shot}_{args.fewshot_seed}_tpl{args.n_template}"
     if not args.train_text_encoder:

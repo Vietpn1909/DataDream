@@ -7,7 +7,8 @@
 #   !pip install -q -r requirements-clf.txt
 #   !pip install -q git+https://github.com/openai/CLIP.git
 #
-# TRÊN MÁY RIÊNG: cài torch trước theo đúng cách ở requirements-gen.txt.
+# TRÊN MÁY RIÊNG: cài torch bản CUDA trước (xem docs/setup.md), rồi mới cài
+# file này.
 #
 # LƯU Ý: bộ ghim này CHƯA được chạy thử end-to-end (bước 3 chưa tới lượt).
 # Ai chạy đầu tiên mà phải sửa phiên bản nào thì sửa thẳng vào file này và

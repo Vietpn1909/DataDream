@@ -1,16 +1,26 @@
 # ============================================================================
 # Bước 1 (fine-tune LoRA) + Bước 2 (sinh ảnh)  --  Việt, TV3
 #
-# CÀI NHƯ SAU (đừng dùng requirements.txt gốc, xem ghi chú ở cuối file):
+# ĐÂY LÀ NGUỒN, KHÔNG PHẢI THỨ ĐỂ CÀI TRỰC TIẾP.
 #
-#   conda create -n datadream python=3.10 -y
-#   conda activate datadream
-#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
-#   pip install -r requirements-gen.txt
+# Để dựng môi trường, chạy:
+#   powershell -ExecutionPolicy Bypass -File scripts\setup_env.ps1
+# Script cài đúng requirements-gen.lock.txt — 45 gói đã giải sẵn từ file này
+# cộng torch 2.11.0+cu128 / torchvision 0.26.0+cu128, và đã kiểm chạy được
+# trên GPU bằng scripts/smoke_test_env.py.
 #
-# torch/torchvision KHÔNG ghim ở đây vì phải lấy từ index cu128 riêng cho card
-# Blackwell (RTX 50xx). Kiểm tra sau khi cài:
-#   python -c "import torch; print(torch.cuda.get_arch_list())"   # phải có sm_120
+# Muốn đổi phiên bản: sửa file này, giải lại một lần cho tất cả
+#   uv pip install -r requirements-gen.txt "torch==<v>+cu128" "torchvision==<v>+cu128" \
+#       --extra-index-url https://download.pytorch.org/whl/cu128 \
+#       --index-strategy unsafe-best-match
+# chạy scripts/smoke_test_env.py, rồi sinh lại lock bằng `uv pip freeze`.
+# Đừng cài torch riêng một bước rồi mới cài file này — xem README.
+#
+# Python PHẢI là 3.10-3.12: numpy 1.26.4, tokenizers 0.15.2, safetensors
+# 0.4.3, Pillow 10.3.0 không có bản cho 3.13 trên Windows.
+#
+# torch/torchvision không ghim ở đây vì phải lấy từ index cu128 riêng cho card
+# Blackwell (RTX 50xx, sm_120) — chúng được ghim trong lock.
 # ============================================================================
 
 # ---- Ghim chặt: đây là bộ phiên bản code chạy được ----

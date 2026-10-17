@@ -84,44 +84,41 @@ Mỗi người một file trong `notebooks/`: `tv4_clip.ipynb`, `tv5_ablation.ip
 Ô đầu tiên của mọi notebook:
 
 ```python
-from google.colab import drive, userdata
+from google.colab import drive
 drive.mount('/content/drive')
 
 import os
-REPO = '/content/datadream-reproduce'
-token = userdata.get('GITHUB_TOKEN')   # chỉ cần nếu repo private
-url = f'https://{token}@github.com/Vietpn1909/DataDream.git' if token else 'https://github.com/Vietpn1909/DataDream.git'
+REPO = '/content/DataDream'
 if os.path.exists(REPO):
     !cd {REPO} && git pull
 else:
-    !git clone {url} {REPO}
+    !git clone https://github.com/Vietpn1909/DataDream.git {REPO}
 %cd {REPO}
 ```
 
-Nếu repo để private: mỗi người tự tạo một fine-grained token **chỉ có quyền với
-repo này**, lưu trong mục Secrets của Colab với tên `GITHUB_TOKEN`. Không dán
-token thẳng vào notebook.
+Repo để public nên không cần token. Nếu sau này chuyển sang private: mỗi người tạo
+một fine-grained token **chỉ có quyền với repo này**, lưu trong mục Secrets của Colab,
+và clone bằng `https://<token>@github.com/...`. Không dán token thẳng vào notebook.
 
-Lưu notebook về repo bằng *File > Save a copy in GitHub*. **Xóa output ảnh lớn
+Thư viện cho bước 3 cài theo [docs/setup.md](docs/setup.md#bước-3-colab).
+
+Lưu notebook về repo bằng *File > Save a copy in GitHub*. **Xoá output ảnh lớn
 trước khi commit** — notebook kèm ảnh làm repo phình rất nhanh và diff vô dụng.
 
 ## 7. Trước khi báo "xong"
 
-```bash
+```powershell
 python scripts/check_env.py
 python scripts/test_kshot_consistency.py
 ```
 
-Cái thứ hai bắt buộc chạy nếu bạn sửa gì liên quan tới việc chọn ảnh — nó kiểm
-tra generator và classifier vẫn chọn cùng một tập K-shot. Lớp lỗi đó đã từng có
-thật trong repo gốc (xem [docs/known-issues.md](docs/known-issues.md) mục 3) và
-nó **không báo lỗi gì cả**, chỉ ra accuracy sai.
+`test_kshot_consistency.py` bắt buộc chạy nếu bạn sửa gì liên quan tới việc chọn
+ảnh — nó kiểm generator và classifier vẫn chọn cùng một tập K-shot. Lớp lỗi đó đã
+từng có thật trong repo gốc ([docs/known-issues.md](docs/known-issues.md), mục 3) và
+**không báo lỗi gì cả**, chỉ ra accuracy sai.
 
-Và với mỗi bộ dữ liệu bàn giao: đếm đủ số ảnh mỗi lớp, xem lưới một ảnh đại
-diện mỗi lớp, có `README.txt` kèm theo, tên zip đúng mẫu, giải nén thử ra đúng
-cấu trúc `train/<tên lớp>/`. Một bộ ảnh lỗi làm phí cả buổi train CLIP trên Colab.
+Ai dùng môi trường bước 1–2 (Việt, TV3) và vừa đổi phiên bản thư viện nào: chạy
+thêm `python scripts/smoke_test_env.py`.
 
-```bash
-# đếm số ảnh mỗi lớp
-for d in <thư mục>/train/*/; do echo "$(ls "$d"*.png | wc -l)  $d"; done
-```
+Bàn giao một bộ dữ liệu: làm theo danh sách kiểm tra ở
+[docs/data.md](docs/data.md#kiểm-tra-trước-khi-bàn-giao).

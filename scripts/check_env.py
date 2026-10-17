@@ -38,6 +38,22 @@ def head(title):
     print("\n=== " + title + " ===")
 
 
+# ------------------------------------------------------------------- python
+def check_python():
+    head("0. Phien ban Python")
+    v = sys.version_info
+    ver = "%d.%d.%d" % (v.major, v.minor, v.micro)
+    if (3, 10) <= (v.major, v.minor) <= (3, 12):
+        ok("Python " + ver + " (" + sys.executable + ")")
+    else:
+        bad(
+            "Python " + ver + " - bo thu vien da ghim chi co ban cho 3.10-3.12",
+            "numpy 1.26.4, tokenizers 0.15.2, safetensors 0.4.3, Pillow 10.3.0 "
+            "khong co ban cho 3.13 tren Windows.\n"
+            "Tao venv bang:  uv venv --python 3.11 .venv",
+        )
+
+
 # ---------------------------------------------------------------- torch / GPU
 def check_torch():
     head("1. PyTorch va GPU")
@@ -174,7 +190,7 @@ def check_local_yaml():
     for d, keys in NEEDED.items():
         p = ROOT / d / "local.yaml"
         if not p.exists():
-            bad("thieu " + d + "/local.yaml", "bash scripts/setup_local_yaml.sh")
+            bad("thieu " + d + "/local.yaml", "python scripts/setup_local_yaml.py")
             continue
         text = p.read_text(encoding="utf-8")
         top = set(re.findall(r"^([A-Za-z_]\w*):", text, re.M))
@@ -334,6 +350,7 @@ def check_patches():
 # --------------------------------------------------------------------- main
 def main():
     print("Kiem tra repo: " + str(ROOT))
+    check_python()
     check_torch()
     check_libs()
     check_local_yaml()
