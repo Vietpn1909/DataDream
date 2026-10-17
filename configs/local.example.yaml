@@ -10,6 +10,9 @@
 #   cp configs/local.example.yaml classify/local.yaml
 #
 # Mỗi file chỉ đọc những key nó cần, nên để nguyên cả 3 khối cũng chạy được.
+#
+# Trên Windows: viết đường dẫn bằng dấu / (D:/DataDream/data/eurosat). Dấu \
+# vẫn chạy nếu không đặt trong ngoặc kép, nhưng / thì khỏi phải nghĩ.
 # ============================================================================
 
 
@@ -81,7 +84,7 @@ real_train_fewshot_data_dir:
 # ---------------------------------------------------------------------------
 # [chung] Dùng bởi cả 3 file: thư mục chứa Stable Diffusion 2.1 base (512)
 # ---------------------------------------------------------------------------
-# Tải bằng:  bash scripts/download_sd21.sh
+# Tải bằng:  python scripts/download_sd21.py
 # (repo stabilityai gốc đã bị gỡ khỏi Hugging Face - script dùng bản mirror)
 # Phải là bản "-base" (512) vì code fine-tune ở độ phân giải 512.
 model_dir:

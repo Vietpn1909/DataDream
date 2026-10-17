@@ -28,26 +28,62 @@ Bước 3 chạy trên Colab.
 
 ## Cài đặt
 
-### Bước 1 + 2 (fine-tune và sinh ảnh)
+### Bước 1 + 2 (fine-tune và sinh ảnh) — chạy thẳng trên Windows
 
-Trên Windows thì làm **toàn bộ trong WSL2 Ubuntu**, vì repo dùng `accelerate`
-và script bash.
+Không cần WSL. Code đã được kiểm: có `if __name__ == "__main__"`, `num_workers=0`
+mặc định, không tách đường dẫn bằng `/` cứng, không gọi lệnh shell, xformers tắt
+mặc định. Dưới Windows hay WSL thì GPU đều chạy qua cùng một driver Windows, nên
+tốc độ như nhau.
 
-```bash
-conda create -n datadream python=3.10 -y
-conda activate datadream
-pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
-pip install -r requirements-gen.txt
+**Phải dùng Python 3.10–3.12, không dùng 3.13+.** Bộ thư viện đã ghim (numpy
+1.26.4, tokenizers 0.15.2, safetensors 0.4.3, Pillow 10.3.0) không có bản cho
+3.13 trên Windows, pip sẽ cố build từ source rồi hỏng. Dùng
+[`uv`](https://docs.astral.sh/uv/) để tạo môi trường riêng với Python 3.11, venv
+nằm ngay trong repo (`.venv/`, đã có trong `.gitignore`):
+
+```powershell
+cd D:\DataDream
+uv venv --python 3.11 .venv
+.venv\Scripts\activate
+uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
+uv pip install -r requirements-gen.txt
+accelerate config default
+```
+
+Nếu `.venv\Scripts\activate` báo *running scripts is disabled on this system*,
+chạy một lần lệnh dưới đây rồi thử lại. Nó chỉ cho phép script cục bộ của tài
+khoản bạn, không đổi gì cho cả máy:
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 ```
 
 Index `cu128` là bắt buộc với card RTX 50xx. Kiểm tra ngay:
 
-```bash
-python -c "import torch; print(torch.__version__, torch.cuda.get_device_name(0)); print(torch.cuda.get_arch_list())"
+```powershell
+python -c "import torch; print(torch.__version__, torch.cuda.is_available(), torch.cuda.get_device_name(0)); print(torch.cuda.get_arch_list())"
 ```
 
-Danh sách kiến trúc **phải có `sm_120`**. Không có là bản torch chưa hỗ trợ card,
-mọi bước sau sẽ lỗi `no kernel image is available`.
+Phải thấy `True` và **`sm_120` trong danh sách kiến trúc**. Không có là bản torch
+chưa hỗ trợ card, mọi bước sau sẽ lỗi `no kernel image is available`. Lỗi hay
+gặp nhất là `pip install -r requirements-gen.txt` tự kéo torch bản CPU từ PyPI
+đè lên — khi đó `is_available()` ra `False`, cài lại torch từ index `cu128`.
+
+Trong VS Code: `Ctrl+Shift+P` → *Python: Select Interpreter* → chọn
+`.venv\Scripts\python.exe`, để hết báo đỏ "Cannot find module".
+
+Trên Windows, vòng lặp 20 lớp của biến thể `cls` viết bằng PowerShell thay vì
+bash:
+
+```powershell
+foreach ($i in 0..19) {
+    accelerate launch datadream.py --target_class_idx=$i <các tham số khác>
+    if ($LASTEXITCODE -ne 0) { break }
+}
+```
+
+Nếu `accelerate launch` lỗi riêng trên Windows, chạy thẳng `python datadream.py
+<tham số>` — một GPU nên `Accelerator()` tự chạy chế độ một tiến trình.
 
 **Đừng cài `requirements.txt`** (của tác giả). File đó không ghim phiên bản và
 kéo theo cả `openai`, `langchain`, `google-cloud-aiplatform`, `gspread` — không
@@ -66,8 +102,8 @@ Trên Colab **đừng** cài lại torch — xem đầu `requirements-clf.txt`.
 
 ### Tải Stable Diffusion 2.1 (bản 512)
 
-```bash
-bash scripts/download_sd21.sh        # tải ~5 GB vào ~/models/sd2.1-base
+```powershell
+python scripts/download_sd21.py D:/models/sd2.1-base   # ~5 GB; bỏ tham số thì vào ~/models/sd2.1-base
 ```
 
 **Đừng dùng `stabilityai/stable-diffusion-2-1-base`** — Stability AI đã gỡ repo
@@ -83,13 +119,14 @@ Phải là bản `-base` (512), không phải bản 768: code fine-tune ở đ�
 Code đọc đường dẫn từ `local.yaml` nằm trong **từng thư mục** — ba file, không
 phải một. Cả ba đã nằm trong `.gitignore`, nên mỗi người tự tạo:
 
-```bash
-bash scripts/setup_local_yaml.sh
+```powershell
+python scripts/setup_local_yaml.py
 ```
 
 Script copy `configs/local.example.yaml` ra `DataDream/local.yaml`,
 `generate/local.yaml`, `classify/local.yaml` (không ghi đè file đã có).
-Mở từng file và thay `/home/USER/...` bằng đường dẫn thật. Phần chú thích trong
+Mở từng file và thay `/home/USER/...` bằng đường dẫn thật — trên Windows viết
+dấu `/`, ví dụ `D:/DataDream/data/eurosat`. Phần chú thích trong
 file mẫu giải thích từng key, kể cả mấy chỗ dễ sai:
 
 - `fewshot_data_dir` (bước 1) và `real_train_fewshot_data_dir` (bước 3) là **hai

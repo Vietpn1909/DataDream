@@ -22,6 +22,8 @@ python scripts/check_env.py
 | 7 | Nên dùng `bf16` thay `fp16` | ⚠️ chọn khi chạy, không phải sửa code |
 | 8–10 | Resume, `count_start`, reload pipeline | ⚠️ cần lưu ý khi chạy |
 | 11–13 | Chi tiết cho báo cáo | 📝 |
+| 14 | `--resume_from_checkpoint` crash với PyTorch ≥ 2.6 | ✅ đã sửa |
+| 15 | Model `stabilityai/stable-diffusion-2-1-base` đã bị gỡ | ✅ có `scripts/download_sd21.py` |
 
 **Mục 2 là việc duy nhất còn chặn người khác.** Nó cần code mới và nên có TV4 xác
 nhận, nên tách PR riêng.
@@ -234,6 +236,44 @@ còn thiếu, và chỉ dùng `count_start` cho một lớp bị dở.
 lại `get_pipe()` từ đầu. Mặt tốt là không bị cộng dồn adapter LoRA; mặt dở là thêm
 ~20 × 30–60 giây và dễ phân mảnh VRAM dần. Nên chạy theo `--n_set_split` thành vài
 khối thay vì một lần 20 lớp.
+
+---
+
+### 14. ✅ ĐÃ SỬA — `--resume_from_checkpoint` crash với PyTorch ≥ 2.6
+
+Phát hiện khi kiểm môi trường, không có trong kế hoạch ban đầu, và xảy ra **dù
+chạy Windows hay Linux**.
+
+Từ PyTorch 2.6, `torch.load` mặc định `weights_only=True`. accelerate 0.29.3
+gọi `torch.load(...)` **không truyền `weights_only`** khi nạp trạng thái
+(`accelerate/checkpointing.py`, dòng 204–275 của bản 0.29.3), mà file
+`random_states_0.pkl` chứa `np.random.get_state()` — mảng numpy, bị bộ nạp
+`weights_only` từ chối → resume crash. Tức là đúng đêm máy tắt giữa chừng, lệnh
+phục hồi lại không chạy.
+
+Không hạ PyTorch xuống dưới 2.6 được, vì card Blackwell (`sm_120`) cần PyTorch
+≥ 2.7. Nâng accelerate thì kéo theo phải nâng diffusers/transformers, mà diffusers
+≥ 0.30 làm vỡ `datadream.py` (mục 6).
+
+Cách sửa: đặt `TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD=1` ở đầu `DataDream/datadream.py`,
+trước khi import diffusers. Biến này (kiểm trên PyTorch 2.11, `torch/serialization.py`)
+khôi phục hành vi cũ **chỉ ở những chỗ không truyền `weights_only`** — đúng
+trường hợp của accelerate. An toàn vì ta chỉ nạp checkpoint do chính mình tạo.
+
+**Vẫn phải thử thật** trong lần chạy thử: train vài trăm bước với
+`--checkpointing_steps=100`, dừng giữa chừng, rồi chạy lại với
+`--resume_from_checkpoint=latest`.
+
+### 15. ✅ ĐÃ SỬA — model SD 2.1 gốc đã bị gỡ khỏi Hugging Face
+
+`stabilityai/stable-diffusion-2-1-base` trả về 401. Lệnh `huggingface-cli
+download` trong kế hoạch sẽ hỏng.
+
+Dùng `python scripts/download_sd21.py`: tải từ mirror cộng đồng
+`sd2-community/stable-diffusion-2-1-base` (đã kiểm có `model_index.json` và đủ 6
+thành phần diffusers), chỉ lấy bản fp32 `.safetensors` + `.json` (~5 GB) thay vì
+cả repo (~37 GB). Không lấy `.bin`/`.ckpt` vì là pickle — nạp vào có thể chạy
+code tùy ý, không nên tin từ repo cộng đồng.
 
 ---
 

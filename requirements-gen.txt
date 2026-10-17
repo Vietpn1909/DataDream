@@ -3,10 +3,13 @@
 #
 # CÀI NHƯ SAU (đừng dùng requirements.txt gốc, xem ghi chú ở cuối file):
 #
-#   conda create -n datadream python=3.10 -y
-#   conda activate datadream
-#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
-#   pip install -r requirements-gen.txt
+#   uv venv --python 3.11 .venv
+#   .venv\Scripts\activate            (Linux/Colab: source .venv/bin/activate)
+#   uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
+#   uv pip install -r requirements-gen.txt
+#
+# Python PHẢI là 3.10-3.12: numpy 1.26.4, tokenizers 0.15.2, safetensors
+# 0.4.3, Pillow 10.3.0 không có bản cho 3.13 trên Windows.
 #
 # torch/torchvision KHÔNG ghim ở đây vì phải lấy từ index cu128 riêng cho card
 # Blackwell (RTX 50xx). Kiểm tra sau khi cài:
