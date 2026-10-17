@@ -67,8 +67,14 @@ Trên Colab **đừng** cài lại torch — xem đầu `requirements-clf.txt`.
 ### Tải Stable Diffusion 2.1 (bản 512)
 
 ```bash
-huggingface-cli download stabilityai/stable-diffusion-2-1-base --local-dir ~/models/sd2.1-base
+bash scripts/download_sd21.sh        # tải ~5 GB vào ~/models/sd2.1-base
 ```
+
+**Đừng dùng `stabilityai/stable-diffusion-2-1-base`** — Stability AI đã gỡ repo
+đó khỏi Hugging Face (trả về 401). Script tải từ bản mirror cộng đồng
+`sd2-community/stable-diffusion-2-1-base`, và chỉ lấy bản fp32 `.safetensors`
+(~5 GB) thay vì cả repo (~37 GB, toàn bản trùng). Không lấy `.bin`/`.ckpt` vì
+đó là pickle, nạp vào có thể chạy code tùy ý.
 
 Phải là bản `-base` (512), không phải bản 768: code fine-tune ở độ phân giải 512.
 
