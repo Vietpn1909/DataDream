@@ -27,7 +27,7 @@ python scripts\check_env.py
 | 15 | Model SD 2.1 gốc đã bị gỡ khỏi Hugging Face | ✅ có `download_sd21.py` |
 | 16 | Mặc định `--n_template` không có hiệu lực | ✅ đã sửa |
 | 17 | **Tập test EuroSAT thực ra là tập train** | ❌ **còn mở — bước 3** |
-| 18 | Mọi lớp dùng chung seed → ảnh các lớp giống nhau | ✅ đã sửa; guidance chờ quyết |
+| 18 | Mọi lớp dùng chung seed → ảnh các lớp giống nhau | ✅ đã sửa |
 
 **Mục 2 và 17 là hai việc còn mở**, đều nằm trong code đánh giá của bước 3
 (`classify/data.py`), thuộc người phụ trách train CLIP. Cả hai đều không báo lỗi gì,
@@ -304,8 +304,9 @@ pixel 0,76 (SD gốc EuroSAT), 0,79 (SD gốc Aircraft), 0,85 (DataDream EuroSAT
 DataDream EuroSAT, 6/10 lớp còn trùng luôn nội dung.
 
 Đã sửa thành mỗi lớp một seed (`seed * 1000 + vị trí lớp`). Sau khi sửa, độ trùng
-về 0, nhưng ảnh chưa giống đúng lớp thật hơn. Muốn ảnh giống lớp thật hơn phải tăng
-guidance (2 → 5 thì +10 điểm), mà đó là thay đổi so với paper nên chờ nhóm quyết.
+về 0. Tăng guidance từ 2 lên 5 làm ảnh giống lớp thật hơn (+10 điểm theo CLIP chưa
+train), nhưng paper cố ý dùng 2.0 để ảnh đa dạng hơn. Vì vậy giữ 2.0 cho tới khi bước 3
+có accuracy thật.
 
 Ba bộ đã sinh trước khi sửa (SD gốc Aircraft, SD gốc EuroSAT, DataDream EuroSAT)
 **chưa bàn giao**, cần sinh lại. Toàn bộ chẩn đoán, số liệu và hình cho báo cáo:
