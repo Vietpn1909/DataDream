@@ -157,8 +157,11 @@ Các thời gian này cũng là số liệu cho phần compute trong báo cáo, 
 Một bộ ảnh lỗi làm phí cả buổi train CLIP trên Colab.
 
 - [ ] Đủ số ảnh mỗi lớp — lệnh đếm ở [run.md](run.md#chạy-qua-đêm)
-- [ ] Xem lưới một ảnh mỗi lớp: không có ảnh đen, ảnh nhiễu, hay lớp toàn ảnh sai
-      đối tượng
+- [ ] Xem lưới vài ảnh mỗi lớp (mỗi lớp một hàng): không có ảnh đen, ảnh nhiễu, hay
+      lớp toàn ảnh sai đối tượng; **các hàng không được giống nhau theo cột** — nếu
+      giống là lỗi seed chung ([known-issues #18](known-issues.md))
+- [ ] Với EuroSAT: chạy `scripts/diag_eval.py` (đo độ trùng giữa các lớp và độ giống
+      ảnh thật) — cách đọc ở [investigations/class-collapse.md](investigations/class-collapse.md)
 - [ ] So vài lớp dễ nhầm (737-300/400/500, A320/A321) với ảnh thật
 - [ ] Có `README.txt`, tên zip đúng mẫu
 - [ ] Giải nén thử ra đúng `train/<tên lớp>/`

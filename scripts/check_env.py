@@ -304,6 +304,15 @@ def check_patches():
     else:
         ok('da bo revision="fp16" trong get_pipe()')
 
+    if re.search(r"set_seed\(\s*seed\s*\)\s*\n\s*generate_image\.run", gen):
+        bad(
+            "generate.py dat cung mot seed cho moi lop -> anh thu k cua cac lop "
+            "giong nhau (docs/investigations/class-collapse.md)",
+            "Doi thanh: set_seed(seed * 1000 + SUBSET_NAMES[dataset].index(classname))",
+        )
+    else:
+        ok("generate.py dat seed rieng cho tung lop")
+
     src = strip_comments(
         (ROOT / "classify" / "data.py").read_text(encoding="utf-8")
     )

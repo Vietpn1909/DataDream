@@ -68,6 +68,7 @@ Chi tiết và lỗi hay gặp: [docs/setup.md](docs/setup.md). Lệnh fine-tune
 | [docs/run.md](docs/run.md) | chạy fine-tune và sinh ảnh |
 | [docs/data.md](docs/data.md) | chuẩn bị, đặt tên, bàn giao dữ liệu |
 | [docs/known-issues.md](docs/known-issues.md) | lỗi của repo gốc: đã sửa gì, còn gì |
+| [docs/investigations/](docs/investigations/) | chẩn đoán chi tiết từng lỗi lớn, số liệu và hình cho báo cáo |
 | [results/README.md](results/README.md) | ghi kết quả vào bảng CSV |
 
 ## Cấu trúc

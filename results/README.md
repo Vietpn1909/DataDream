@@ -30,5 +30,6 @@ không ai dựng lại được con số trong bảng của báo cáo.
 - `results/clf_main.csv` — TV4: bảng chính
 - `results/clf_ablation.csv` — TV5: bảng ablation
 - `results/fid.csv` — TV3: FID và các chỉ số ảnh
+- `results/diag_class_collapse.csv` — Việt: chẩn đoán lỗi sập lớp, cột riêng do `scripts/diag_eval.py` ghi ([giải thích](../docs/investigations/class-collapse.md))
 
 Ghi thêm dòng thì **append vào cuối file**, đừng sắp xếp lại — git merge dễ hơn nhiều.
