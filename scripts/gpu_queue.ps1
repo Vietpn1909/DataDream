@@ -4,8 +4,8 @@
 #   powershell -ExecutionPolicy Bypass -File scripts\gpu_queue.ps1
 #   them -DryRun de chi in ra se lam gi, khong chay
 #
-# - Bo anh nao du roi thi bo qua. Bo anh do dang thi chi sinh cac lop con thieu,
-#   tu dung so anh con thieu (anh PNG ghi do khi mat dien bi phat hien va xoa).
+# - Bo anh nao du roi thi bo qua. Bo anh do dang thi chi sinh cac lop con thieu;
+#   lop dang do duoc sinh LAI TU ANH 0 (mat toi da ~6 phut), xem ghi chu o vong lap.
 # - Fine-tune da xong (co pytorch_lora_weights.safetensors) thi bo qua; dang do
 #   va con checkpoint thi tu them --resume_from_checkpoint=latest. Thieu co nay
 #   la mat that: no train lai tu dau va xoa checkpoint cu (limit = 1).
@@ -114,8 +114,13 @@ foreach ($j in $jobs) {
         "  con thieu $($todo.Count)/$($j.nclass) lop"
         foreach ($line in $todo) {
             $idx, $cls, $cs = $line -split "`t"
-            $argv = $j.args + @("--n_set_split=$($j.nclass)", "--split_idx=$idx", "--count_start=$cs")
-            $rc = Run-Step $j.name $py $argv "$repo\generate" ("lop $idx ($cls) tu anh $cs")
+            # Khong sinh tiep tu anh $cs: generate.py dat lai seed o dau moi lop nen
+            # anh $cs se nhan dung nhieu cua anh 0 -> ban sao y het trong cung lop.
+            # Sinh lai ca lop tu 0 thi ket qua giong het lan chay khong bi ngat.
+            $argv = $j.args + @("--n_set_split=$($j.nclass)", "--split_idx=$idx", "--count_start=0")
+            $note = "lop $idx ($cls) tu anh 0"
+            if ([int]$cs -gt 0) { $note += " (da co $cs anh, sinh lai ca lop)" }
+            $rc = Run-Step $j.name $py $argv "$repo\generate" $note
             if ($rc -ne 0) { $failed = $true; break }
         }
         if ($failed) { break }

@@ -181,6 +181,10 @@ chung trong `run.md` đã đặt `--checkpoints_total_limit=1`.
 đúng: chạy lại khối lớp còn thiếu bằng `--n_set_split` / `--split_idx` — xem
 [run.md](run.md#chạy-qua-đêm).
 
+Kể cả khi chỉ áp cho một lớp, `--count_start` vẫn không chạy tiếp đúng: seed được đặt
+lại ở đầu lớp, nên ảnh thứ `count_start` trở đi là **bản sao y hệt** ảnh 0, 1, 2… của
+chính lớp đó (cùng prompt, cùng nhiễu). Hàng đợi vì vậy sinh lại cả lớp dở từ ảnh 0.
+
 ### 10. ℹ️ Sinh ảnh cls nạp lại pipeline 20 lần
 
 Với `--is_dataset_wise_model=False`, `generate/generate.py:400-402` gọi lại
