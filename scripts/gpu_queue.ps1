@@ -44,19 +44,34 @@ $common = @("--fewshot_seed=seed0", "--n_shot=16", "--n_template=1",
 $dd = @("--mode=datadream", "--n_shot=16", "--fewshot_seed=seed0",
         "--datadream_lr=1e-4", "--datadream_epoch=200")
 
+$eurosatCls = @("AnnualCrop", "Forest", "HerbaceousVegetation", "Highway", "Industrial",
+                "Pasture", "PermanentCrop", "Residential", "River", "SeaLake")
+$ckRoot = "$repo\DataDream\outputs\eurosat\shot16_seed0_tpl1\lr0.0001_epoch200"
+
 $jobs = @(
-    @{ name = "aircraft20_sdbase"; type = "gen"; dataset = "fgvc_aircraft"; nclass = 20; n = 200
-       out = "$synth\fgvc_aircraft\sd2.1\gs2.0_nis50\shot0_template1"
-       args = $gen + @("--mode=zeroshot", "--dataset=fgvc_aircraft") },
     @{ name = "eurosat_sdbase"; type = "gen"; dataset = "eurosat"; nclass = 10; n = 200
        out = "$synth\eurosat\sd2.1\gs2.0_nis50\shot0_template1"
        args = $gen + @("--mode=zeroshot", "--dataset=eurosat") },
     @{ name = "eurosat_dset_finetune"; type = "ft"
-       ckdir = "$repo\DataDream\outputs\eurosat\shot16_seed0_tpl1\lr0.0001_epoch200\dataset-wise"
+       ckdir = "$ckRoot\dataset-wise"
        args = @("launch", "datadream.py", "--dataset=eurosat") + $common },
     @{ name = "eurosat_dset_generate"; type = "gen"; dataset = "eurosat"; nclass = 10; n = 200
        out = "$synth\eurosat\sd2.1\gs2.0_nis50\shot16_seed0_template1_lr0.0001_ep200_dswise"
        args = $gen + $dd + @("--is_dataset_wise_model=True", "--dataset=eurosat") }
+)
+# cls: mot LoRA moi lop, 400 buoc - qua it de ghi checkpoint, tat may giua chung
+# thi lop do train lai tu dau (~5 phut), cac lop da xong duoc bo qua
+for ($i = 0; $i -lt $eurosatCls.Count; $i++) {
+    $jobs += @{ name = "eurosat_cls_finetune_$i"; type = "ft"; ckdir = "$ckRoot\$($eurosatCls[$i])"
+                args = @("launch", "datadream.py", "--dataset=eurosat", "--target_class_idx=$i") + $common }
+}
+$jobs += @(
+    @{ name = "eurosat_cls_generate"; type = "gen"; dataset = "eurosat"; nclass = 10; n = 200
+       out = "$synth\eurosat\sd2.1\gs2.0_nis50\shot16_seed0_template1_lr0.0001_ep200"
+       args = $gen + $dd + @("--is_dataset_wise_model=False", "--dataset=eurosat") },
+    @{ name = "aircraft20_sdbase"; type = "gen"; dataset = "fgvc_aircraft"; nclass = 20; n = 200
+       out = "$synth\fgvc_aircraft\sd2.1\gs2.0_nis50\shot0_template1"
+       args = $gen + @("--mode=zeroshot", "--dataset=fgvc_aircraft") }
 )
 
 # Thong bao trong ham dung Write-Host: moi gia tri khac in ra deu bi gop vao gia
