@@ -26,9 +26,12 @@ python scripts\check_env.py
 | 14 | Nghi resume crash với PyTorch ≥ 2.6 | ✅ đã kiểm: không phải lỗi |
 | 15 | Model SD 2.1 gốc đã bị gỡ khỏi Hugging Face | ✅ có `download_sd21.py` |
 | 16 | Mặc định `--n_template` không có hiệu lực | ✅ đã sửa |
+| 17 | **Tập test EuroSAT thực ra là tập train** | ❌ **còn mở — bước 3** |
+| 18 | Mọi lớp dùng chung seed → ảnh các lớp giống nhau | ✅ đã sửa; guidance chờ quyết |
 
-**Mục 2 là việc duy nhất còn chặn người khác**, và chưa có người nhận. Nó cần code
-mới và nên có TV4 xác nhận, nên tách PR riêng.
+**Mục 2 và 17 là hai việc còn mở**, đều nằm trong code đánh giá của bước 3
+(`classify/data.py`), thuộc người phụ trách train CLIP. Cả hai đều không báo lỗi gì,
+chỉ cho ra con số sai, nên phải sửa trước khi chạy số đầu tiên.
 
 ---
 
@@ -261,6 +264,52 @@ thì:
 Cùng loại bẫy, nhưng không phải lỗi: `--learning_rate` mặc định là `5e-4`, khác
 `1e-4` của paper. Quên truyền thì checkpoint nằm ở `lr0.0005_…/` và `generate.py`
 không tìm thấy. Tham số chung trong `run.md` đã có sẵn.
+
+### 17. ❌ Tập test EuroSAT thực ra là tập train
+
+EuroSAT không có tập test chính thức; `classify/` dùng file chia của CoOp,
+`split_zhou_EuroSAT.json`, gồm ba phần `train` (13.500 ảnh), `val` (5.400), `test`
+(8.100). Hàm `split_eurosat(file_path, split, dataset)` lọc ảnh theo phần được
+truyền vào.
+
+Nhưng **cả nhánh train lẫn nhánh test đều truyền `'train'`**:
+
+```python
+# classify/data.py, nhánh train ảnh thật (~dòng 590)
+train_dataset = split_eurosat(eurosat_path_train, 'train', train_dataset)
+# classify/data.py, get_test_dataset (~dòng 679)
+test_dataset = split_eurosat(eurosat_path_test, 'train', test_dataset)
+```
+
+Tức là classifier được **chấm điểm trên chính 13.500 ảnh của phần train**. Accuracy
+EuroSAT sẽ bị thổi phồng, và mọi so sánh dùng EuroSAT (ablation) đều sai. Sửa: đổi
+`'train'` thành `'test'` ở dòng thứ hai.
+
+Đáng ghi vào báo cáo: nếu số liệu EuroSAT của paper được chạy bằng chính code này
+thì chúng cũng mắc lỗi tương tự — nên so với số của paper phải thận trọng.
+
+Ngoài ra, nhánh test của cả Aircraft lẫn EuroSAT đọc từ `real_train_data_dir` chứ
+không phải `real_test_data_dir`, nên giá trị điền ở key test trong `local.yaml` không
+có tác dụng gì.
+
+Ảnh few-shot EuroSAT đã được lấy đúng từ phần `train` của file chia này
+(`scripts/make_fewshot_eurosat.py`), nên sau khi sửa dòng trên, few-shot và tập
+test không trùng nhau.
+
+### 18. ✅ Mọi lớp dùng chung seed → ảnh các lớp giống nhau
+
+`generate.py` gốc gọi `set_seed(seed)` trước *mỗi* lớp, nên ảnh thứ k của mọi lớp
+bắt đầu từ cùng một nhiễu. Hậu quả: ảnh thứ k của hai lớp khác nhau có tương quan
+pixel 0,76 (SD gốc EuroSAT), 0,79 (SD gốc Aircraft), 0,85 (DataDream EuroSAT). Ở
+DataDream EuroSAT, 6/10 lớp còn trùng luôn nội dung.
+
+Đã sửa thành mỗi lớp một seed (`seed * 1000 + vị trí lớp`). Sau khi sửa, độ trùng
+về 0, nhưng ảnh chưa giống đúng lớp thật hơn. Muốn ảnh giống lớp thật hơn phải tăng
+guidance (2 → 5 thì +10 điểm), mà đó là thay đổi so với paper nên chờ nhóm quyết.
+
+Ba bộ đã sinh trước khi sửa (SD gốc Aircraft, SD gốc EuroSAT, DataDream EuroSAT)
+**chưa bàn giao**, cần sinh lại. Toàn bộ chẩn đoán, số liệu và hình cho báo cáo:
+[investigations/class-collapse.md](investigations/class-collapse.md).
 
 ---
 

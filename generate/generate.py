@@ -420,7 +420,12 @@ def main(
                 generate_image.update_pipe(pipe)
 
         # run
-        set_seed(seed)
+        # NHOM SUA: goc la `set_seed(seed)` -> moi lop bat dau tu CUNG mot nhieu,
+        # anh thu k cua moi lop co chung bo cuc (tuong quan pixel 0.76-0.85 giua
+        # cac lop, voi DataDream EuroSAT ca noi dung cung trung). Moi lop mot seed
+        # rieng, lay theo vi tri trong SUBSET_NAMES de khong phu thuoc split_idx.
+        # Chi tiet: docs/investigations/class-collapse.md
+        set_seed(seed * 1000 + SUBSET_NAMES[dataset].index(classname))
         generate_image.run(classname)
 
 

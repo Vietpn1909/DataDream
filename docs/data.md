@@ -4,7 +4,8 @@ Repo **không chứa dữ liệu**: ảnh thật, ảnh sinh và checkpoint đ�
 chung và trên máy từng người. `.gitignore` đã chặn `data/`, `synthetic/`,
 `outputs*/`, ảnh, `.safetensors`, `.zip`.
 
-- [Ảnh thật few-shot](#ảnh-thật-few-shot) — TV2 chuẩn bị
+- [Ảnh thật few-shot](#ảnh-thật-few-shot) — quy tắc chung, Aircraft
+- [Ảnh thật few-shot: EuroSAT](#ảnh-thật-few-shot-eurosat) — đã tạo bằng script
 - [Ảnh sinh](#ảnh-sinh) — `generate.py` tạo ra
 - [Drive chung và bàn giao](#drive-chung-và-bàn-giao)
 
@@ -47,6 +48,44 @@ Trên máy Việt, `<fewshot_data_dir>` là
 **Tập test** không nằm ở đây: `classify/` tự tải FGVC-Aircraft qua torchvision. Lưu
 ý tập đó chưa được lọc về 20 lớp —
 [known-issues.md](known-issues.md), mục 2.
+
+---
+
+## Ảnh thật few-shot: EuroSAT
+
+EuroSAT không có tập test chính thức. `classify/` dùng file chia của CoOp,
+`split_zhou_EuroSAT.json` (train 13.500 / val 5.400 / test 8.100 ảnh), nên tập
+few-shot **phải lấy từ phần `train` của file đó** — lấy chỗ khác là có nguy cơ ảnh
+fine-tune lọt vào tập test.
+
+Đã tạo sẵn trên máy Việt, bằng script trong repo:
+
+```powershell
+python scripts\make_fewshot_eurosat.py              # seed0, 16 ảnh/lớp
+python scripts\make_fewshot_eurosat.py --seed 1     # thêm một seed nếu cần
+```
+
+Cách chọn: mỗi lớp, sort tên file trong phần `train`, rồi lấy ngẫu nhiên 16 ảnh bằng
+`random.Random(seed)`. Cùng seed ra cùng tập trên mọi máy. Script tự kiểm không ảnh
+nào thuộc `val`/`test`, và ghi `manifest.json` liệt kê ảnh đã chọn.
+
+Cấu trúc trên máy, khớp với chỗ `classify/` sẽ đọc:
+
+```
+D:/DataDream/data/eurosat/
+├── train/
+│   ├── eurosat/2750/<lớp>/<ảnh>.jpg      torchvision.datasets.EuroSAT tải về
+│   └── split_zhou_EuroSAT.json            file chia của CoOp
+└── real_train_fewshot/seed0/
+    ├── <lớp>/  × 10, mỗi lớp 16 ảnh
+    └── manifest.json
+```
+
+File chia tải từ link trong
+[DATASETS.md của CoOp](https://github.com/KaiyangZhou/CoOp/blob/main/DATASETS.md#eurosat).
+
+**Người phụ trách dữ liệu xem lại tập này.** Nếu muốn chọn ảnh theo cách khác thì
+các bộ ảnh DataDream EuroSAT đã sinh phải chạy lại (khoảng 1 giờ 40 phút GPU).
 
 ---
 
@@ -118,8 +157,11 @@ Các thời gian này cũng là số liệu cho phần compute trong báo cáo, 
 Một bộ ảnh lỗi làm phí cả buổi train CLIP trên Colab.
 
 - [ ] Đủ số ảnh mỗi lớp — lệnh đếm ở [run.md](run.md#chạy-qua-đêm)
-- [ ] Xem lưới một ảnh mỗi lớp: không có ảnh đen, ảnh nhiễu, hay lớp toàn ảnh sai
-      đối tượng
+- [ ] Xem lưới vài ảnh mỗi lớp (mỗi lớp một hàng): không có ảnh đen, ảnh nhiễu, hay
+      lớp toàn ảnh sai đối tượng; **các hàng không được giống nhau theo cột** — nếu
+      giống là lỗi seed chung ([known-issues #18](known-issues.md))
+- [ ] Với EuroSAT: chạy `scripts/diag_eval.py` (đo độ trùng giữa các lớp và độ giống
+      ảnh thật) — cách đọc ở [investigations/class-collapse.md](investigations/class-collapse.md)
 - [ ] So vài lớp dễ nhầm (737-300/400/500, A320/A321) với ảnh thật
 - [ ] Có `README.txt`, tên zip đúng mẫu
 - [ ] Giải nén thử ra đúng `train/<tên lớp>/`

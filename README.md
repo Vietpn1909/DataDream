@@ -50,9 +50,14 @@ Chi tiết và lỗi hay gặp: [docs/setup.md](docs/setup.md). Lệnh fine-tune
 
 ## Việc còn mở
 
-> **Tập test chưa được lọc về 20 lớp.** Bước 3 sẽ crash hoặc ra accuracy vô nghĩa
-> cho tới khi việc này xong, và chưa có người nhận. Xem
-> [docs/known-issues.md](docs/known-issues.md), mục 2.
+> Hai lỗi trong code đánh giá của bước 3 (`classify/data.py`), chưa có người nhận.
+> Cả hai không báo lỗi gì, chỉ cho ra accuracy sai — phải sửa trước khi chạy số đầu
+> tiên:
+>
+> - **Tập test Aircraft chưa được lọc về 20 lớp** — code tự tải đủ 100 loại máy bay.
+>   [known-issues.md, mục 2](docs/known-issues.md).
+> - **Tập test EuroSAT thực ra là tập train** — accuracy EuroSAT bị thổi phồng.
+>   [known-issues.md, mục 17](docs/known-issues.md).
 
 ## Tài liệu
 
@@ -63,6 +68,7 @@ Chi tiết và lỗi hay gặp: [docs/setup.md](docs/setup.md). Lệnh fine-tune
 | [docs/run.md](docs/run.md) | chạy fine-tune và sinh ảnh |
 | [docs/data.md](docs/data.md) | chuẩn bị, đặt tên, bàn giao dữ liệu |
 | [docs/known-issues.md](docs/known-issues.md) | lỗi của repo gốc: đã sửa gì, còn gì |
+| [docs/investigations/](docs/investigations/) | chẩn đoán chi tiết từng lỗi lớn, số liệu và hình cho báo cáo |
 | [results/README.md](results/README.md) | ghi kết quả vào bảng CSV |
 
 ## Cấu trúc
@@ -73,7 +79,7 @@ generate/                   bước 2 — sinh ảnh
 classify/                   bước 3 — train CLIP
 configs/                    danh sách 20 lớp, mẫu local.yaml
 docs/                       tài liệu của nhóm
-scripts/                    dựng môi trường, tải model, kiểm tra
+scripts/                    dựng môi trường, tải model, kiểm tra, hàng đợi GPU
 results/                    bảng kết quả CSV, hình cho báo cáo
 notebooks/                  notebook Colab, mỗi người một file
 requirements-gen.lock.txt   môi trường bước 1–2 đã kiểm, cài qua setup_env.ps1
