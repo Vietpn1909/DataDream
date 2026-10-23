@@ -21,7 +21,7 @@ python scripts\check_env.py
 | 7 | `mixed_precision` mặc định là fp32 | ⚠️ truyền `--mixed_precision=bf16` |
 | 8 | Biến thể cls không bao giờ ghi checkpoint | ⚠️ dùng vòng lặp ở `run.md` |
 | 9 | `--count_start` không phải cơ chế resume | ⚠️ dùng `--n_set_split` |
-| 10 | Sinh ảnh cls nạp lại pipeline 20 lần | ℹ️ đã đo: không đáng kể |
+| 10 | Sinh ảnh cls giữ 2 pipeline trên GPU → chậm ~10 lần | ✅ đã sửa |
 | 11–13 | Chi tiết cần ghi đúng trong báo cáo | 📝 |
 | 14 | Nghi resume crash với PyTorch ≥ 2.6 | ✅ đã kiểm: không phải lỗi |
 | 15 | Model SD 2.1 gốc đã bị gỡ khỏi Hugging Face | ✅ có `download_sd21.py` |
@@ -185,13 +185,21 @@ Kể cả khi chỉ áp cho một lớp, `--count_start` vẫn không chạy ti�
 lại ở đầu lớp, nên ảnh thứ `count_start` trở đi là **bản sao y hệt** ảnh 0, 1, 2… của
 chính lớp đó (cùng prompt, cùng nhiễu). Hàng đợi vì vậy sinh lại cả lớp dở từ ảnh 0.
 
-### 10. ℹ️ Sinh ảnh cls nạp lại pipeline 20 lần
+### 10. ✅ Sinh ảnh cls nạp lại pipeline từng lớp, giữ 2 bản trên GPU
 
 Với `--is_dataset_wise_model=False`, `generate/generate.py:400-402` gọi lại
 `get_pipe()` cho từng lớp. Mặt tốt là không bị cộng dồn adapter LoRA giữa các lớp.
 
 Đã đo: nạp pipeline từ ổ D: mất **2,8 giây**, nên 20 lần chỉ thêm khoảng một phút
-trên tổng gần hai tiếng — không đáng tối ưu.
+trên tổng gần hai tiếng — thời gian nạp không đáng tối ưu.
+
+**Nhưng code gốc không giải phóng pipeline cũ** (pipeline nạp ở đầu `main()` vẫn nằm
+trên GPU khi nạp cái mới), nên có hai bản SD cùng lúc. Trên card 16 GB, VRAM lên
+15,9 / 16,3 GB, Windows đẩy phần dư sang RAM thường và sinh ảnh chậm khoảng 10 lần:
+mỗi lô 10 ảnh mất 2,5–4 phút thay vì 15 giây. Không có lỗi nào báo ra, chỉ chậm. Đo
+trên 20 ảnh: **186 giây → 43 giây**, VRAM 15,9 → 14,0 GB, ảnh giống hệt từng pixel.
+Đã sửa: giải phóng pipeline cũ (`gc.collect()` + `torch.cuda.empty_cache()`) trước
+khi nạp cái mới.
 
 ---
 

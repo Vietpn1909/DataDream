@@ -1,4 +1,5 @@
 
+import gc
 import json
 import os
 import pickle
@@ -404,6 +405,13 @@ def main(
                 pass
             else:
                 # update pipe
+                # NHOM SUA: giai phong pipeline cu truoc khi nap cai moi. Code goc
+                # giu 2 ban SD tren GPU cung luc (~15.9/16.3 GB tren card 16 GB)
+                # -> Windows day phan du sang RAM, sinh anh cham ~10 lan.
+                generate_image.update_pipe(None)
+                del pipe
+                gc.collect()
+                torch.cuda.empty_cache()
                 pipe = get_pipe(sd_version, model_dir, device, is_tqdm)
                 pipe = update_pipe(
                     pipe,
