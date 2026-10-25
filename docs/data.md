@@ -156,7 +156,10 @@ Các thời gian này cũng là số liệu cho phần compute trong báo cáo, 
 
 Một bộ ảnh lỗi làm phí cả buổi train CLIP trên Colab.
 
-- [ ] Đủ số ảnh mỗi lớp — lệnh đếm ở [run.md](run.md#chạy-qua-đêm)
+- [ ] Chạy `python scripts\qa_synth.py <thư mục bộ ảnh> <dataset>` — kiểm **toàn bộ**
+      ảnh: cấu trúc thư mục, `prompts.json`, ảnh hỏng / sai kích thước / ảnh cũ sót
+      lại, ảnh đen, ảnh trùng, lỗi seed chung, và dùng CLIP xem ảnh có đúng chủ đề.
+      Phải ra `DAT`; các dòng `[chu y]` thì xem lưới ảnh nó ghi ra `outputs_logs/qa/`
 - [ ] Xem lưới vài ảnh mỗi lớp (mỗi lớp một hàng): không có ảnh đen, ảnh nhiễu, hay
       lớp toàn ảnh sai đối tượng; **các hàng không được giống nhau theo cột** — nếu
       giống là lỗi seed chung ([known-issues #18](known-issues.md))
