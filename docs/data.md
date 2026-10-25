@@ -1,13 +1,13 @@
 # Dữ liệu
 
-Repo **không chứa dữ liệu**: ảnh thật, ảnh sinh và checkpoint đều để trên Drive
-chung và trên máy từng người. `.gitignore` đã chặn `data/`, `synthetic/`,
+Repo **không chứa dữ liệu**: ảnh thật, ảnh sinh và checkpoint đều để trên kho
+chung (Kaggle) và trên máy từng người. `.gitignore` đã chặn `data/`, `synthetic/`,
 `outputs*/`, ảnh, `.safetensors`, `.zip`.
 
 - [Ảnh thật few-shot](#ảnh-thật-few-shot) — quy tắc chung, Aircraft
 - [Ảnh thật few-shot: EuroSAT](#ảnh-thật-few-shot-eurosat) — đã tạo bằng script
 - [Ảnh sinh](#ảnh-sinh) — `generate.py` tạo ra
-- [Drive chung và bàn giao](#drive-chung-và-bàn-giao)
+- [Bàn giao dữ liệu](#bàn-giao-dữ-liệu) — Kaggle, cách dùng trên Colab
 
 ---
 
@@ -111,17 +111,55 @@ là khoảng 12 GB.
 
 ---
 
-## Drive chung và bàn giao
+## Bàn giao dữ liệu
+
+Ảnh sinh, LoRA và tập few-shot EuroSAT đã bàn giao trên **Kaggle** (công khai):
+**<https://www.kaggle.com/datasets/vitphmnguyn/datadream>**
+
+Kaggle đã tự giải nén các file zip, nên trên Kaggle mỗi bộ là một thư mục:
 
 ```
-DataDream_shared/
-├── real/         ảnh thật và tập few-shot           (TV2 quản lý)
-├── synthetic/    các file zip ảnh sinh              (Việt quản lý)
-├── lora/         pytorch_lora_weights.safetensors   (Việt)
-└── logs/         log tensorboard và README.txt kèm mỗi bộ
+handoff/
+├── synthetic/                                     ảnh sinh (Việt)
+│   ├── eurosat_sdbase_K0_n200/train/<lớp>/<số>.png      + README.txt
+│   ├── eurosat_dset_K16_n200/train/...
+│   ├── eurosat_cls_K16_n200/train/...
+│   └── aircraft20_sdbase_K0_n200/train/...
+├── lora/eurosat_lora_K16_seed0/<dataset-wise|lớp>/pytorch_lora_weights.safetensors
+└── real/eurosat_fewshot_seed0_K16/seed0/<lớp>/*.jpg   + manifest.json
 ```
 
-Link Drive: _(điền vào đây)_
+Mỗi bộ có `README.txt` (cạnh thư mục và bên trong): lệnh đã chạy, commit, thời
+gian, kết quả kiểm tra, hạn chế đã biết, và **các cờ bắt buộc ở bước 3**.
+
+### Dùng trên Colab
+
+`classify/` đọc ảnh sinh ở
+`<synth_train_data_dir>/<dataset>/sd2.1/gs2.0_nis50/<thư mục giữa>/train/`, khác
+cấu trúc trên Kaggle. Ô dưới tải dataset (~4,3 GB) rồi tạo symlink đúng chỗ code
+cần, không phải chép ảnh:
+
+```python
+import os, kagglehub
+root = kagglehub.dataset_download("vitphmnguyn/datadream") + "/handoff"
+SYN = "/content/synthetic"          # điền vào classify/local.yaml: synth_train_data_dir
+for src, dst in {
+    "eurosat_sdbase_K0_n200":    "eurosat/sd2.1/gs2.0_nis50/shot0_template1",
+    "eurosat_dset_K16_n200":     "eurosat/sd2.1/gs2.0_nis50/shot16_seed0_template1_lr0.0001_ep200_dswise",
+    "eurosat_cls_K16_n200":      "eurosat/sd2.1/gs2.0_nis50/shot16_seed0_template1_lr0.0001_ep200",
+    "aircraft20_sdbase_K0_n200": "fgvc_aircraft/sd2.1/gs2.0_nis50/shot0_template1",
+}.items():
+    os.makedirs(os.path.dirname(f"{SYN}/{dst}"), exist_ok=True)
+    if not os.path.exists(f"{SYN}/{dst}"):
+        os.symlink(f"{root}/synthetic/{src}", f"{SYN}/{dst}")
+# tập few-shot EuroSAT: fewshot_data_dir = f"{root}/real/eurosat_fewshot_seed0_K16"
+```
+
+Nếu `kagglehub` đòi đăng nhập: `kagglehub.login()`, hoặc đặt `KAGGLE_USERNAME` và
+`KAGGLE_KEY` (tạo ở kaggle.com → Settings → API).
+
+Bộ mới (Aircraft DataDream, IsSynth, ablation) sẽ thêm vào **cùng dataset này** dưới
+dạng phiên bản mới, giữ nguyên cách đặt tên dưới đây.
 
 ### Đặt tên
 
