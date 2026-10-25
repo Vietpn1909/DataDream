@@ -4,8 +4,8 @@
 #   powershell -ExecutionPolicy Bypass -File scripts\gpu_queue.ps1
 #   them -DryRun de chi in ra se lam gi, khong chay
 #
-# - Bo anh nao du roi thi bo qua. Bo anh do dang thi chi sinh cac lop con thieu,
-#   tu dung so anh con thieu (anh PNG ghi do khi mat dien bi phat hien va xoa).
+# - Bo anh nao du roi thi bo qua. Bo anh do dang thi chi sinh cac lop con thieu;
+#   lop dang do duoc sinh LAI TU ANH 0 (mat toi da ~6 phut), xem ghi chu o vong lap.
 # - Fine-tune da xong (co pytorch_lora_weights.safetensors) thi bo qua; dang do
 #   va con checkpoint thi tu them --resume_from_checkpoint=latest. Thieu co nay
 #   la mat that: no train lai tu dau va xoa checkpoint cu (limit = 1).
@@ -44,19 +44,34 @@ $common = @("--fewshot_seed=seed0", "--n_shot=16", "--n_template=1",
 $dd = @("--mode=datadream", "--n_shot=16", "--fewshot_seed=seed0",
         "--datadream_lr=1e-4", "--datadream_epoch=200")
 
+$eurosatCls = @("AnnualCrop", "Forest", "HerbaceousVegetation", "Highway", "Industrial",
+                "Pasture", "PermanentCrop", "Residential", "River", "SeaLake")
+$ckRoot = "$repo\DataDream\outputs\eurosat\shot16_seed0_tpl1\lr0.0001_epoch200"
+
 $jobs = @(
-    @{ name = "aircraft20_sdbase"; type = "gen"; dataset = "fgvc_aircraft"; nclass = 20; n = 200
-       out = "$synth\fgvc_aircraft\sd2.1\gs2.0_nis50\shot0_template1"
-       args = $gen + @("--mode=zeroshot", "--dataset=fgvc_aircraft") },
     @{ name = "eurosat_sdbase"; type = "gen"; dataset = "eurosat"; nclass = 10; n = 200
        out = "$synth\eurosat\sd2.1\gs2.0_nis50\shot0_template1"
        args = $gen + @("--mode=zeroshot", "--dataset=eurosat") },
     @{ name = "eurosat_dset_finetune"; type = "ft"
-       ckdir = "$repo\DataDream\outputs\eurosat\shot16_seed0_tpl1\lr0.0001_epoch200\dataset-wise"
+       ckdir = "$ckRoot\dataset-wise"
        args = @("launch", "datadream.py", "--dataset=eurosat") + $common },
     @{ name = "eurosat_dset_generate"; type = "gen"; dataset = "eurosat"; nclass = 10; n = 200
        out = "$synth\eurosat\sd2.1\gs2.0_nis50\shot16_seed0_template1_lr0.0001_ep200_dswise"
        args = $gen + $dd + @("--is_dataset_wise_model=True", "--dataset=eurosat") }
+)
+# cls: mot LoRA moi lop, 400 buoc - qua it de ghi checkpoint, tat may giua chung
+# thi lop do train lai tu dau (~5 phut), cac lop da xong duoc bo qua
+for ($i = 0; $i -lt $eurosatCls.Count; $i++) {
+    $jobs += @{ name = "eurosat_cls_finetune_$i"; type = "ft"; ckdir = "$ckRoot\$($eurosatCls[$i])"
+                args = @("launch", "datadream.py", "--dataset=eurosat", "--target_class_idx=$i") + $common }
+}
+$jobs += @(
+    @{ name = "eurosat_cls_generate"; type = "gen"; dataset = "eurosat"; nclass = 10; n = 200
+       out = "$synth\eurosat\sd2.1\gs2.0_nis50\shot16_seed0_template1_lr0.0001_ep200"
+       args = $gen + $dd + @("--is_dataset_wise_model=False", "--dataset=eurosat") },
+    @{ name = "aircraft20_sdbase"; type = "gen"; dataset = "fgvc_aircraft"; nclass = 20; n = 200
+       out = "$synth\fgvc_aircraft\sd2.1\gs2.0_nis50\shot0_template1"
+       args = $gen + @("--mode=zeroshot", "--dataset=fgvc_aircraft") }
 )
 
 # Thong bao trong ham dung Write-Host: moi gia tri khac in ra deu bi gop vao gia
@@ -99,8 +114,13 @@ foreach ($j in $jobs) {
         "  con thieu $($todo.Count)/$($j.nclass) lop"
         foreach ($line in $todo) {
             $idx, $cls, $cs = $line -split "`t"
-            $argv = $j.args + @("--n_set_split=$($j.nclass)", "--split_idx=$idx", "--count_start=$cs")
-            $rc = Run-Step $j.name $py $argv "$repo\generate" ("lop $idx ($cls) tu anh $cs")
+            # Khong sinh tiep tu anh $cs: generate.py dat lai seed o dau moi lop nen
+            # anh $cs se nhan dung nhieu cua anh 0 -> ban sao y het trong cung lop.
+            # Sinh lai ca lop tu 0 thi ket qua giong het lan chay khong bi ngat.
+            $argv = $j.args + @("--n_set_split=$($j.nclass)", "--split_idx=$idx", "--count_start=0")
+            $note = "lop $idx ($cls) tu anh 0"
+            if ([int]$cs -gt 0) { $note += " (da co $cs anh, sinh lai ca lop)" }
+            $rc = Run-Step $j.name $py $argv "$repo\generate" $note
             if ($rc -ne 0) { $failed = $true; break }
         }
         if ($failed) { break }

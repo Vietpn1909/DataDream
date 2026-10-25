@@ -45,8 +45,9 @@ Chi tiết và lỗi hay gặp: [docs/setup.md](docs/setup.md). Lệnh fine-tune
 [CONTRIBUTING.md](CONTRIBUTING.md#6-notebook-colab), thư viện ở
 [requirements-clf.txt](requirements-clf.txt).
 
-**Dữ liệu** — đặt ảnh ở đâu, đặt tên thế nào, bàn giao qua Drive ra sao:
-[docs/data.md](docs/data.md).
+**Dữ liệu** — ảnh sinh, LoRA, tập few-shot đã bàn giao trên
+[Kaggle](https://www.kaggle.com/datasets/vitphmnguyn/datadream); cách dùng trên Colab,
+đặt tên, cấu trúc thư mục: [docs/data.md](docs/data.md).
 
 ## Việc còn mở
 

@@ -194,7 +194,7 @@ vào `outputs_logs/` — số liệu cho phần compute của báo cáo.
 
 | Việc đang dở | Mất gì | Hàng đợi làm gì khi chạy lại |
 |---|---|---|
-| sinh ảnh | lô 10 ảnh đang sinh; có thể một PNG ghi dở | bỏ qua lớp đã đủ ảnh; lớp dở thì sinh tiếp từ đúng ảnh còn thiếu; PNG hỏng bị phát hiện và xoá |
+| sinh ảnh | lớp đang dở (~6 phút) | bỏ qua lớp đã đủ ảnh; lớp dở thì **sinh lại cả lớp từ ảnh 0** (lý do ở dưới); PNG hỏng bị phát hiện và xoá |
 | fine-tune | tối đa 1.000 bước (~12 phút) | thấy checkpoint thì tự thêm `--resume_from_checkpoint=latest` |
 | việc đã xong | không | bỏ qua |
 
@@ -209,9 +209,10 @@ những đêm chạy dài.
 - **Fine-tune:** chạy lại **phải** thêm `--resume_from_checkpoint=latest`. Thiếu cờ
   này thì không chỉ train lại từ đầu, mà tới bước 1.000 code còn **xoá checkpoint
   cũ** (vì `--checkpoints_total_limit=1`) — mất thật.
-- **Sinh ảnh:** đừng thêm `--count_start` cho cả lần chạy — nó áp cho mọi lớp, nên
-  sinh đè lên lớp đã xong. Chỉ dùng cho **một lớp**: `--n_set_split=<số lớp>
-  --split_idx=<vị trí lớp> --count_start=<số ảnh đã có>`. Đây chính là cách hàng đợi
+- **Sinh ảnh:** đừng dùng `--count_start` để chạy tiếp. `generate.py` đặt lại seed ở
+  đầu mỗi lớp, nên ảnh thứ `count_start` nhận đúng nhiễu của ảnh 0 → **bản sao y hệt
+  trong cùng lớp**. Lớp nào dở thì sinh lại cả lớp: `--n_set_split=<số lớp>
+  --split_idx=<vị trí lớp>`, không có `--count_start`. Đây chính là cách hàng đợi
   làm.
 - **cls:** `--resume_from_checkpoint` không giúp được — mỗi lớp chỉ 400 bước, không
   bao giờ tới mốc 1.000 bước. Vòng lặp ở mục 1 tự bỏ qua lớp đã xong.

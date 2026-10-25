@@ -45,3 +45,6 @@ env/
 Thumbs.db
 .vscode/
 .idea/
+
+# ---- Thư mục đóng gói để tải lên Drive (zip + README.txt) ----
+handoff/
