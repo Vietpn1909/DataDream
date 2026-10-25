@@ -249,8 +249,30 @@ class DatasetSynthImage(Dataset):
         return len(self.image_paths)
 
 
+def filter_aircraft_classes(dataset):
+    # NHOM THEM: torchvision nap du 100 variant, nhan 0..99 theo thu tu cua no,
+    # trong khi model chi co 20 dau ra (len(SUBSET_NAMES)). Giu anh cua 20 lop
+    # trong SUBSET_NAMES['fgvc_aircraft'] va doi nhan thanh VI TRI trong danh
+    # sach do - dung nhan ma anh sinh (DatasetSynthImage) dang dung. Anh xa
+    # theo TEN lop: ten nao khong co trong torchvision thi KeyError ngay, thay vi
+    # am tham ra nhan sai. Xem docs/known-issues.md muc 2.
+    keep = SUBSET_NAMES['fgvc_aircraft']
+    new_label = {dataset.class_to_idx[name]: i for i, name in enumerate(keep)}
+    pairs = [(f, new_label[l]) for f, l in zip(dataset._image_files, dataset._labels)
+             if l in new_label]
+    dataset._image_files = [f for f, _ in pairs]
+    dataset._labels = [l for _, l in pairs]
+    dataset.classes = list(keep)
+    dataset.class_to_idx = {name: i for i, name in enumerate(keep)}
+    return dataset
+
+
 def filter_dset(dataset, n_img_per_cls, dataset_name):
     import random
+    # NHOM SUA: goc goi random.sample khong dat seed -> moi lan chay chon mot
+    # tap anh that khac, baseline anh that khong tai lap duoc. Dung RNG rieng
+    # seed 0 (khong dong vao RNG toan cuc ma phan train dang dung).
+    rng = random.Random(0)
     print(n_img_per_cls)
     if dataset_name == 'pets':
         _images = dataset._images
@@ -275,10 +297,10 @@ def filter_dset(dataset, n_img_per_cls, dataset_name):
         raise ValueError("Please specify valid dataset.")
     new_images = []
     new_labels = []
-    for i in set(_labels):
+    for i in sorted(set(_labels)):
         candidates = [j for j in range(len(_labels)) if _labels[j] == i]
         img_per_cls = min(n_img_per_cls, len(candidates))  # allow for less if not enoug
-        idx = random.sample(range(0, len(candidates)), img_per_cls)
+        idx = rng.sample(range(0, len(candidates)), img_per_cls)
         new_images.extend([_images[candidates[j]] for j in idx])
         new_labels.extend([_labels[candidates[j]] for j in idx])
     if dataset_name == 'pets':
@@ -313,8 +335,12 @@ def split_eurosat(file_path, split, dataset):
                          "also be found at /shared-local/jbader40/data/eurosat/EuroSAT/train/split_zhou_EuroSAT.json).")
     f = open(split_file_path)
     split_files = json.load(f)
-    data = [os.path.join(file_path, 'eurosat', '2750', path[0]) for path in split_files[split]]
-    dataset.samples = [sample for sample in dataset.samples if sample[0] in data]
+    # NHOM SUA: dung set thay vi list (goc so ~27.000 x 8.100 lan), va normpath
+    # hai ve de khop ca tren Windows (file chia dung '/', torchvision dung '\').
+    data = {os.path.normpath(os.path.join(file_path, 'eurosat', '2750', path[0]))
+            for path in split_files[split]}
+    dataset.samples = [sample for sample in dataset.samples if os.path.normpath(sample[0]) in data]
+    dataset.targets = [s[1] for s in dataset.samples]
     dataset.labels = [s[1] for s in dataset.samples]
     return dataset
 
@@ -577,6 +603,7 @@ def get_data_loader(
                 transform=train_transform,
                 download=True,
             )
+            train_dataset = filter_aircraft_classes(train_dataset)  # NHOM THEM
             train_dataset = filter_dset(dataset=train_dataset, n_img_per_cls=n_img_per_cls, dataset_name=dataset)
         elif dataset == 'eurosat':
             eurosat_path_train = os.path.join(real_train_data_dir, 'train')
@@ -667,6 +694,7 @@ def get_data_loader(
             transform=test_transform,
             download=True,
         )
+        test_dataset = filter_aircraft_classes(test_dataset)  # NHOM THEM
     elif dataset == 'eurosat':
         eurosat_path_test = os.path.join(real_train_data_dir, 'train')
         import ssl
@@ -676,7 +704,10 @@ def get_data_loader(
             transform=test_transform,
             download=True,
         )
-        test_dataset = split_eurosat(eurosat_path_test, 'train', test_dataset)
+        # NHOM SUA: goc truyen 'train' -> classifier duoc cham diem tren chinh
+        # 13.500 anh phan train. Tap test cua file chia CoOp la 'test' (8.100 anh).
+        # Xem docs/known-issues.md muc 17.
+        test_dataset = split_eurosat(eurosat_path_test, 'test', test_dataset)
     elif dataset == 'cars':
         # note: this must be train, because the Cars dataset had to be downloaded by hand and is kept in the same
         # directory as the training data

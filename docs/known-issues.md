@@ -13,7 +13,7 @@ python scripts\check_env.py
 | # | Vấn đề | Trạng thái |
 |:-:|---|---|
 | 1 | Danh sách lớp phải cắt xuống 20 ở cả 3 module | ✅ đã sửa |
-| 2 | **Tập test chưa được lọc về 20 lớp** | ❌ **còn mở — chặn bước 3** |
+| 2 | Tập test chưa được lọc về 20 lớp | ✅ đã sửa |
 | 3 | Classifier chọn ảnh không sort (3 chỗ) | ✅ đã sửa |
 | 4 | `assert` chặn `mode=zeroshot` | ✅ đã sửa |
 | 5 | `revision="fp16"` khi nạp model local | ✅ đã sửa |
@@ -26,12 +26,13 @@ python scripts\check_env.py
 | 14 | Nghi resume crash với PyTorch ≥ 2.6 | ✅ đã kiểm: không phải lỗi |
 | 15 | Model SD 2.1 gốc đã bị gỡ khỏi Hugging Face | ✅ có `download_sd21.py` |
 | 16 | Mặc định `--n_template` không có hiệu lực | ✅ đã sửa |
-| 17 | **Tập test EuroSAT thực ra là tập train** | ❌ **còn mở — bước 3** |
+| 17 | Tập test EuroSAT thực ra là tập train | ✅ đã sửa |
 | 18 | Mọi lớp dùng chung seed → ảnh các lớp giống nhau | ✅ đã sửa |
+| 19 | **Setting "chỉ ảnh thật" không dùng đúng tập few-shot** | ❌ **còn mở — bước 3** |
 
-**Mục 2 và 17 là hai việc còn mở**, đều nằm trong code đánh giá của bước 3
-(`classify/data.py`), thuộc người phụ trách train CLIP. Cả hai đều không báo lỗi gì,
-chỉ cho ra con số sai, nên phải sửa trước khi chạy số đầu tiên.
+**Mục 19 là việc còn mở**, nằm trong code bước 3 (`classify/data.py`): không báo lỗi
+gì, chỉ làm baseline "chỉ ảnh thật" không so sánh công bằng với DataDream. Mục 2 và
+17 đã sửa và kiểm bằng `python scripts	est_eval_splits.py`.
 
 ---
 
@@ -60,7 +61,7 @@ cho mục 2.
 Đổi danh sách sau khi đã train thì mọi checkpoint và bộ ảnh sinh trước đó hết dùng
 được. Phải chốt một lần, sớm, rồi không đổi nữa.
 
-### 2. ❌ Tập test chưa được lọc về 20 lớp
+### 2. ✅ Tập test chưa được lọc về 20 lớp
 
 Vấn đề nghiêm trọng nhất, và sẽ lộ ra muộn nhất — lúc TV4 chạy số đầu tiên.
 
@@ -81,6 +82,13 @@ nhánh train ảnh thật (`data.py:553`).
 Phụ: `filter_dset()` dùng `random.sample` **không đặt seed** (`data.py:263`), nên
 baseline ảnh thật không tái lập giữa các lần chạy. Nên nhận một `seed` và truyền
 vào.
+
+**Đã sửa:** hàm mới `filter_aircraft_classes()` trong `classify/data.py`, gọi ở cả tập
+test và nhánh train ảnh thật. Hàm ánh xạ theo **tên** lớp (không theo danh sách số
+viết tay), nên tên nào lệch với torchvision là báo lỗi ngay. `filter_dset()` dùng RNG
+riêng seed 0. Kiểm bằng `scripts/test_eval_splits.py`: tập test còn 668 ảnh, 20 nhãn
+0..19, 33–34 ảnh/lớp, nhãn mới trỏ đúng tên lớp gốc của cả 668 ảnh. Code cũ cho 3.333
+ảnh với nhãn 0..99.
 
 ### 3. ✅ Classifier chọn ảnh không sort
 
@@ -277,7 +285,7 @@ Cùng loại bẫy, nhưng không phải lỗi: `--learning_rate` mặc định 
 `1e-4` của paper. Quên truyền thì checkpoint nằm ở `lr0.0005_…/` và `generate.py`
 không tìm thấy. Tham số chung trong `run.md` đã có sẵn.
 
-### 17. ❌ Tập test EuroSAT thực ra là tập train
+### 17. ✅ Tập test EuroSAT thực ra là tập train
 
 EuroSAT không có tập test chính thức; `classify/` dùng file chia của CoOp,
 `split_zhou_EuroSAT.json`, gồm ba phần `train` (13.500 ảnh), `val` (5.400), `test`
@@ -308,6 +316,11 @@ có tác dụng gì.
 (`scripts/make_fewshot_eurosat.py`), nên sau khi sửa dòng trên, few-shot và tập
 test không trùng nhau.
 
+**Đã sửa:** đổi thành `'test'`. Kèm theo, `split_eurosat()` so đường dẫn bằng set (code
+gốc so ~27.000 × 8.100 lần) và chuẩn hoá `/` – `\` — code gốc chạy trên Windows ra
+**0 ảnh** vì lệch dấu gạch. Kiểm bằng `scripts/test_eval_splits.py`: tập test 8.100
+ảnh, đủ 10 nhãn, không trùng ảnh nào với phần train, không chứa ảnh few-shot nào.
+
 ### 18. ✅ Mọi lớp dùng chung seed → ảnh các lớp giống nhau
 
 `generate.py` gốc gọi `set_seed(seed)` trước *mỗi* lớp, nên ảnh thứ k của mọi lớp
@@ -323,6 +336,23 @@ có accuracy thật.
 Ba bộ đã sinh trước khi sửa (SD gốc Aircraft, SD gốc EuroSAT, DataDream EuroSAT)
 **chưa bàn giao**, cần sinh lại. Toàn bộ chẩn đoán, số liệu và hình cho báo cáo:
 [investigations/class-collapse.md](investigations/class-collapse.md).
+
+### 19. ❌ Setting "chỉ ảnh thật" không dùng đúng tập few-shot
+
+Ba setting của bước 3 lấy ảnh thật từ hai nguồn khác nhau:
+
+- **thật + sinh** (`--is_pooled_fewshot=True`): đọc `real_train_fewshot_data_dir` —
+  đúng 16 ảnh/lớp mà generator đã fine-tune.
+- **chỉ ảnh thật** (`--is_synth_train=False`): `get_data_loader()` lấy
+  `n_img_per_cls` ảnh **ngẫu nhiên** từ toàn bộ phần train qua `filter_dset()` — một
+  tập 16 ảnh **khác**.
+
+Tức là baseline "chỉ ảnh thật" và DataDream không dùng cùng 16 ảnh thật, so sánh trong
+bảng chính không công bằng (paper so trên cùng tập few-shot). Không báo lỗi gì.
+
+Hướng sửa: ở nhánh ảnh thật của `get_data_loader()`, khi `n_shot > 0` thì đọc thẳng
+`real_train_fewshot_data_dir/<lớp>/` (sort `natural_keys`, lấy `n_shot` ảnh đầu) thay
+vì `filter_dset()`. Chưa sửa — cần người phụ trách bước 3 chốt cách chạy baseline.
 
 ---
 

@@ -51,14 +51,12 @@ Chi tiết và lỗi hay gặp: [docs/setup.md](docs/setup.md). Lệnh fine-tune
 
 ## Việc còn mở
 
-> Hai lỗi trong code đánh giá của bước 3 (`classify/data.py`), chưa có người nhận.
-> Cả hai không báo lỗi gì, chỉ cho ra accuracy sai — phải sửa trước khi chạy số đầu
-> tiên:
+> - **Baseline "chỉ ảnh thật" không dùng đúng tập 16-shot** mà DataDream fine-tune —
+>   so sánh trong bảng chính không công bằng. Không báo lỗi gì.
+>   [known-issues.md, mục 19](docs/known-issues.md).
 >
-> - **Tập test Aircraft chưa được lọc về 20 lớp** — code tự tải đủ 100 loại máy bay.
->   [known-issues.md, mục 2](docs/known-issues.md).
-> - **Tập test EuroSAT thực ra là tập train** — accuracy EuroSAT bị thổi phồng.
->   [known-issues.md, mục 17](docs/known-issues.md).
+> Hai lỗi tập test (Aircraft chưa lọc về 20 lớp, EuroSAT dùng nhầm tập train) **đã
+> sửa** — kiểm bằng `python scripts	est_eval_splits.py`.
 
 ## Tài liệu
 
