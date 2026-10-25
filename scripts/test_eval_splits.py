@@ -118,5 +118,42 @@ for ds, sub, n_test, n_cls in (("eurosat", "eurosat", 8100, 10), ("fgvc_aircraft
         b = {os.path.normpath(s[0]) for s in te.dataset.samples}
         check(not (a & b), "eurosat: anh that dung de train khong nam trong tap test")
 
+# ------------------------------------- tap few-shot o 2 setting co anh that (muc 19)
+print("== Anh that dung dung tap 16-shot (muc 19)")
+import shutil  # noqa: E402
+import tempfile  # noqa: E402
+from data import get_synth_train_data_loader  # noqa: E402
+fs_src = Path(args.data) / "eurosat" / "real_train_fewshot" / "seed0"
+synth = REPO / "synthetic/eurosat/sd2.1/gs2.0_nis50/shot16_seed0_template1_lr0.0001_ep200/train"
+if not fs_src.is_dir():
+    print("  bo qua: khong thay", fs_src)
+else:
+    # chep tap few-shot ra thu muc KHONG co chu "real_train" (nhu khi tai tu Kaggle)
+    tmp = Path(tempfile.mkdtemp()) / "kaggle_fewshot" / "seed0"
+    shutil.copytree(fs_src, tmp)
+    want = {(p.parent.name, p.name) for p in fs_src.rglob("*.jpg")}
+    tr, _ = get_data_loader(real_train_data_dir=str(Path(args.data) / "eurosat"), dataset="eurosat",
+                            is_synth_train=False, n_shot=16, real_train_fewshot_data_dir=str(tmp),
+                            model_type="clip")
+    got = {(Path(p).parent.name, Path(p).name) for p in tr.dataset.image_paths}
+    check(got == want and len(tr.dataset) == 160,
+          "chi anh that, n_shot=16: %d anh, dung 160 anh few-shot: %s" % (len(tr.dataset), got == want))
+    x, y = tr.dataset[0]
+    check(tuple(x.shape) == (3, 224, 224), "doc anh duoc, tensor %s, nhan %d" % (tuple(x.shape), y))
+    if synth.is_dir():
+        sl = get_synth_train_data_loader(synth_train_data_dir=str(synth), n_img_per_cls=200, dataset="eurosat",
+                                         n_shot=16, real_train_fewshot_data_dir=str(tmp),
+                                         is_pooled_fewshot=True, model_type="clip")
+        ds = sl.dataset
+        n_real = len(ds) - ds.n_synth
+        real_paths = {(Path(p).parent.name, Path(p).name) for p in ds.image_paths[ds.n_synth:]}
+        check(ds.n_synth == 2000 and n_real == 160 * 12 and real_paths == want,
+              "that + sinh: %d anh sinh + %d anh that (16 anh x 12 lan lap x 10 lop), dung tap few-shot"
+              % (ds.n_synth, n_real))
+        flags = [ds[i][2] for i in (0, ds.n_synth - 1, ds.n_synth, len(ds) - 1)]
+        check(flags == [False, False, True, True],
+              "co is_real dung ca khi duong dan khong chua 'real_train': %s" % flags)
+    shutil.rmtree(tmp.parent.parent, ignore_errors=True)
+
 print("\nKET QUA:", "DAT" if not fails else "KHONG DAT - %d loi" % len(fails))
 sys.exit(1 if fails else 0)

@@ -51,12 +51,11 @@ Chi tiết và lỗi hay gặp: [docs/setup.md](docs/setup.md). Lệnh fine-tune
 
 ## Việc còn mở
 
-> - **Baseline "chỉ ảnh thật" không dùng đúng tập 16-shot** mà DataDream fine-tune —
->   so sánh trong bảng chính không công bằng. Không báo lỗi gì.
->   [known-issues.md, mục 19](docs/known-issues.md).
->
-> Hai lỗi tập test (Aircraft chưa lọc về 20 lớp, EuroSAT dùng nhầm tập train) **đã
-> sửa** — kiểm bằng `python scripts	est_eval_splits.py`.
+> Không còn lỗi đã biết nào đang mở. Bốn lỗi của code đánh giá ở bước 3 — tập test
+> Aircraft chưa lọc về 20 lớp, tập test EuroSAT là tập train, baseline "chỉ ảnh thật"
+> không dùng đúng tập 16-shot, setting "thật + sinh" nhận nhầm ảnh thật — **đã sửa**
+> và kiểm bằng `python scripts\test_eval_splits.py`
+> ([known-issues.md](docs/known-issues.md), mục 2, 17, 19, 20).
 
 ## Tài liệu
 

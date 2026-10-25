@@ -153,7 +153,7 @@ Lưu ý:
 - `classify/local.yaml` cần đủ 7 key, kể cả `wandb_key` khi dùng tensorboard — thiếu
   một key là `KeyError` ngay khi khởi động.
 - `classify/main.py` `import wandb` vô điều kiện, nên phải cài `wandb` dù không dùng.
-- Trước khi chạy baseline "chỉ ảnh thật": [known-issues.md](known-issues.md), mục 19.
+- Các bản sửa của code đánh giá: [known-issues.md](known-issues.md), mục 2, 17, 19, 20.
 
 ---
 

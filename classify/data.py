@@ -209,6 +209,11 @@ class DatasetSynthImage(Dataset):
                     ospj(synth_train_data_dir, class_name, fname))
                 self.image_labels.append(label)
 
+        # NHOM SUA: anh sinh nam o dau danh sach, anh that (pooled) noi vao sau.
+        # Ghi lai ranh gioi de __getitem__ biet anh nao la anh that, thay cho
+        # cach goc do chuoi "real_train" trong duong dan (sai khi thu muc few-shot
+        # khong ten real_train..., vd tai tu Kaggle -> loss_real tren tap rong).
+        self.n_synth = len(self.image_paths)
         if is_pooled_fewshot:
             if n_shot == 0:
                 n_shot = 16
@@ -238,12 +243,39 @@ class DatasetSynthImage(Dataset):
         image = Image.open(image_path)
         image = image.convert('RGB')
         image = self.transform(image)
-        is_real = "real_train" in image_path
+        is_real = idx >= self.n_synth  # NHOM SUA: xem __init__
 
         if self.is_pooled_fewshot:
             return image, image_label, is_real
         else:
             return image, image_label
+
+    def __len__(self):
+        return len(self.image_paths)
+
+
+class DatasetFewshotReal(Dataset):
+    # NHOM THEM: setting "chi anh that" dung DUNG tap K-shot ma generator da
+    # fine-tune (<real_train_fewshot_data_dir>/<lop>/, sort natural_keys, lay
+    # n_shot anh dau) - giong het cach DatasetSynthImage lay anh that khi pooled
+    # va DataDream/datadream.py chon anh. Goc dung filter_dset() boc NGAU NHIEN
+    # tu ca phan train -> tap khac, so sanh voi DataDream khong cong bang.
+    # Xem docs/known-issues.md muc 19.
+    def __init__(self, real_train_fewshot_data_dir, transform, dataset, n_shot):
+        self.transform = transform
+        self.image_paths = []
+        self.image_labels = []
+        for label, class_name in enumerate(SUBSET_NAMES[dataset]):
+            d = ospj(real_train_fewshot_data_dir, class_name)
+            names = sorted(os.listdir(d), key=natural_keys)[:n_shot]
+            if len(names) < n_shot:
+                raise ValueError(f"{d}: chi co {len(names)} anh, can {n_shot}")
+            self.image_paths += [ospj(d, n) for n in names]
+            self.image_labels += [label] * n_shot
+
+    def __getitem__(self, idx):
+        image = Image.open(self.image_paths[idx]).convert('RGB')
+        return self.transform(image), self.image_labels[idx]
 
     def __len__(self):
         return len(self.image_paths)
@@ -565,7 +597,14 @@ def get_data_loader(
     if is_synth_train:
         train_loader = None
     else:
-        if dataset == 'imagenet':
+        if n_shot > 0 and dataset != 'imagenet':
+            # NHOM SUA: K-shot thi doc dung tap few-shot (muc 19). n_shot=0 giu
+            # nhanh goc ben duoi (n_img_per_cls anh tu ca phan train).
+            train_dataset = DatasetFewshotReal(
+                real_train_fewshot_data_dir,
+                train_transform if is_rand_aug else test_transform,
+                dataset, n_shot)
+        elif dataset == 'imagenet':
             train_dataset = ImageNetDatasetFromMetadata(
                 data_root=real_train_data_dir,
                 metadata_root=ospj(metadata_dir, 'train'),

@@ -28,11 +28,11 @@ python scripts\check_env.py
 | 16 | Mặc định `--n_template` không có hiệu lực | ✅ đã sửa |
 | 17 | Tập test EuroSAT thực ra là tập train | ✅ đã sửa |
 | 18 | Mọi lớp dùng chung seed → ảnh các lớp giống nhau | ✅ đã sửa |
-| 19 | **Setting "chỉ ảnh thật" không dùng đúng tập few-shot** | ❌ **còn mở — bước 3** |
+| 19 | Setting "chỉ ảnh thật" không dùng đúng tập few-shot | ✅ đã sửa |
+| 20 | Setting "thật + sinh" nhận ảnh thật qua tên thư mục | ✅ đã sửa |
 
-**Mục 19 là việc còn mở**, nằm trong code bước 3 (`classify/data.py`): không báo lỗi
-gì, chỉ làm baseline "chỉ ảnh thật" không so sánh công bằng với DataDream. Mục 2 và
-17 đã sửa và kiểm bằng `python scripts	est_eval_splits.py`.
+Hiện **không còn lỗi nào đã biết đang mở**. Các lỗi của code đánh giá (mục 2, 17, 19,
+20) đã sửa và kiểm bằng `python scripts\test_eval_splits.py`.
 
 ---
 
@@ -337,22 +337,37 @@ Ba bộ đã sinh trước khi sửa (SD gốc Aircraft, SD gốc EuroSAT, DataD
 **chưa bàn giao**, cần sinh lại. Toàn bộ chẩn đoán, số liệu và hình cho báo cáo:
 [investigations/class-collapse.md](investigations/class-collapse.md).
 
-### 19. ❌ Setting "chỉ ảnh thật" không dùng đúng tập few-shot
+### 19. ✅ Setting "chỉ ảnh thật" không dùng đúng tập few-shot
 
 Ba setting của bước 3 lấy ảnh thật từ hai nguồn khác nhau:
 
 - **thật + sinh** (`--is_pooled_fewshot=True`): đọc `real_train_fewshot_data_dir` —
   đúng 16 ảnh/lớp mà generator đã fine-tune.
-- **chỉ ảnh thật** (`--is_synth_train=False`): `get_data_loader()` lấy
-  `n_img_per_cls` ảnh **ngẫu nhiên** từ toàn bộ phần train qua `filter_dset()` — một
-  tập 16 ảnh **khác**.
+- **chỉ ảnh thật** (`--is_synth_train=False`): code gốc lấy `n_img_per_cls` ảnh
+  **ngẫu nhiên, không seed** từ toàn bộ phần train qua `filter_dset()` — một tập khác.
 
-Tức là baseline "chỉ ảnh thật" và DataDream không dùng cùng 16 ảnh thật, so sánh trong
+Tức là baseline "chỉ ảnh thật" và DataDream không dùng cùng ảnh thật, so sánh trong
 bảng chính không công bằng (paper so trên cùng tập few-shot). Không báo lỗi gì.
 
-Hướng sửa: ở nhánh ảnh thật của `get_data_loader()`, khi `n_shot > 0` thì đọc thẳng
-`real_train_fewshot_data_dir/<lớp>/` (sort `natural_keys`, lấy `n_shot` ảnh đầu) thay
-vì `filter_dset()`. Chưa sửa — cần người phụ trách bước 3 chốt cách chạy baseline.
+**Đã sửa:** `DatasetFewshotReal` trong `classify/data.py`. Khi `--n_shot > 0`, nhánh
+ảnh thật đọc thẳng `real_train_fewshot_data_dir/<lớp>/`, sort `natural_keys`, lấy
+`n_shot` ảnh đầu — cùng cách với setting thật + sinh và với `DataDream/datadream.py`.
+`--n_shot=0` giữ nhánh gốc (dùng khi muốn baseline nhiều ảnh thật hơn).
+
+Ghi chú: với EuroSAT seed0, sau khi `filter_dset()` được đặt seed 0 (mục 2) thì tình cờ
+bốc trúng đúng tập few-shot, vì `make_fewshot_eurosat.py` dùng cùng thuật toán và
+seed. Không có gì đảm bảo điều đó cho Aircraft, seed hay K khác — nên vẫn phải sửa.
+
+### 20. ✅ Setting "thật + sinh" nhận ảnh thật bằng chuỗi `real_train` trong đường dẫn
+
+`DatasetSynthImage.__getitem__` gốc đặt `is_real = "real_train" in image_path`. Thư mục
+few-shot không có chữ đó — ví dụ tải từ Kaggle (`real/eurosat_fewshot_seed0_K16/`) —
+thì **mọi ảnh thật bị coi là ảnh sinh**: `loss_real` tính trên tập rỗng, có thể ra
+`nan`, hoặc trọng số `--lambda_1` mất tác dụng. Không báo lỗi gì. Đã kiểm trên code
+gốc: 0/20 ảnh thật được nhận là thật.
+
+**Đã sửa:** ghi lại ranh giới (ảnh sinh ở đầu danh sách, ảnh thật nối sau) và dựa vào
+vị trí thay vì đường dẫn.
 
 ---
 
