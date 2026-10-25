@@ -346,6 +346,24 @@ def check_patches():
     else:
         ok("classify/data.py da sort khi duyet anh sinh")
 
+    if re.search(r"test_dataset\s*=\s*split_eurosat\([^)]*'train'", src):
+        bad(
+            "classify/data.py cham diem EuroSAT tren phan 'train' -> accuracy bi "
+            "thoi phong (known-issues muc 17)",
+            "Doi thanh split_eurosat(eurosat_path_test, 'test', test_dataset).",
+        )
+    else:
+        ok("classify/data.py cham diem EuroSAT tren phan 'test'")
+
+    if len(re.findall(r"=\s*filter_aircraft_classes\(", src)) < 2:
+        bad(
+            "classify/data.py chua loc FGVC-Aircraft ve 20 lop o ca tap test va "
+            "nhanh anh that -> nhan 0..99 cho model 20 dau ra (known-issues muc 2)",
+            "Goi filter_aircraft_classes() sau ca hai cho tao tv.datasets.FGVCAircraft.",
+        )
+    else:
+        ok("classify/data.py loc FGVC-Aircraft ve 20 lop (tap test + anh that)")
+
     utils_src = (ROOT / "classify" / "utils.py").read_text(encoding="utf-8")
     if "def natural_keys" in utils_src:
         ok("classify/utils.py co natural_keys (khop voi DataDream/util.py)")

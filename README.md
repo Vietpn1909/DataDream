@@ -51,14 +51,11 @@ Chi tiết và lỗi hay gặp: [docs/setup.md](docs/setup.md). Lệnh fine-tune
 
 ## Việc còn mở
 
-> Hai lỗi trong code đánh giá của bước 3 (`classify/data.py`), chưa có người nhận.
-> Cả hai không báo lỗi gì, chỉ cho ra accuracy sai — phải sửa trước khi chạy số đầu
-> tiên:
->
-> - **Tập test Aircraft chưa được lọc về 20 lớp** — code tự tải đủ 100 loại máy bay.
->   [known-issues.md, mục 2](docs/known-issues.md).
-> - **Tập test EuroSAT thực ra là tập train** — accuracy EuroSAT bị thổi phồng.
->   [known-issues.md, mục 17](docs/known-issues.md).
+> Không còn lỗi đã biết nào đang mở. Bốn lỗi của code đánh giá ở bước 3 — tập test
+> Aircraft chưa lọc về 20 lớp, tập test EuroSAT là tập train, baseline "chỉ ảnh thật"
+> không dùng đúng tập 16-shot, setting "thật + sinh" nhận nhầm ảnh thật — **đã sửa**
+> và kiểm bằng `python scripts\test_eval_splits.py`
+> ([known-issues.md](docs/known-issues.md), mục 2, 17, 19, 20).
 
 ## Tài liệu
 

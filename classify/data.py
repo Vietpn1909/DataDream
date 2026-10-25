@@ -209,6 +209,11 @@ class DatasetSynthImage(Dataset):
                     ospj(synth_train_data_dir, class_name, fname))
                 self.image_labels.append(label)
 
+        # NHOM SUA: anh sinh nam o dau danh sach, anh that (pooled) noi vao sau.
+        # Ghi lai ranh gioi de __getitem__ biet anh nao la anh that, thay cho
+        # cach goc do chuoi "real_train" trong duong dan (sai khi thu muc few-shot
+        # khong ten real_train..., vd tai tu Kaggle -> loss_real tren tap rong).
+        self.n_synth = len(self.image_paths)
         if is_pooled_fewshot:
             if n_shot == 0:
                 n_shot = 16
@@ -238,7 +243,7 @@ class DatasetSynthImage(Dataset):
         image = Image.open(image_path)
         image = image.convert('RGB')
         image = self.transform(image)
-        is_real = "real_train" in image_path
+        is_real = idx >= self.n_synth  # NHOM SUA: xem __init__
 
         if self.is_pooled_fewshot:
             return image, image_label, is_real
@@ -249,8 +254,57 @@ class DatasetSynthImage(Dataset):
         return len(self.image_paths)
 
 
+class DatasetFewshotReal(Dataset):
+    # NHOM THEM: setting "chi anh that" dung DUNG tap K-shot ma generator da
+    # fine-tune (<real_train_fewshot_data_dir>/<lop>/, sort natural_keys, lay
+    # n_shot anh dau) - giong het cach DatasetSynthImage lay anh that khi pooled
+    # va DataDream/datadream.py chon anh. Goc dung filter_dset() boc NGAU NHIEN
+    # tu ca phan train -> tap khac, so sanh voi DataDream khong cong bang.
+    # Xem docs/known-issues.md muc 19.
+    def __init__(self, real_train_fewshot_data_dir, transform, dataset, n_shot):
+        self.transform = transform
+        self.image_paths = []
+        self.image_labels = []
+        for label, class_name in enumerate(SUBSET_NAMES[dataset]):
+            d = ospj(real_train_fewshot_data_dir, class_name)
+            names = sorted(os.listdir(d), key=natural_keys)[:n_shot]
+            if len(names) < n_shot:
+                raise ValueError(f"{d}: chi co {len(names)} anh, can {n_shot}")
+            self.image_paths += [ospj(d, n) for n in names]
+            self.image_labels += [label] * n_shot
+
+    def __getitem__(self, idx):
+        image = Image.open(self.image_paths[idx]).convert('RGB')
+        return self.transform(image), self.image_labels[idx]
+
+    def __len__(self):
+        return len(self.image_paths)
+
+
+def filter_aircraft_classes(dataset):
+    # NHOM THEM: torchvision nap du 100 variant, nhan 0..99 theo thu tu cua no,
+    # trong khi model chi co 20 dau ra (len(SUBSET_NAMES)). Giu anh cua 20 lop
+    # trong SUBSET_NAMES['fgvc_aircraft'] va doi nhan thanh VI TRI trong danh
+    # sach do - dung nhan ma anh sinh (DatasetSynthImage) dang dung. Anh xa
+    # theo TEN lop: ten nao khong co trong torchvision thi KeyError ngay, thay vi
+    # am tham ra nhan sai. Xem docs/known-issues.md muc 2.
+    keep = SUBSET_NAMES['fgvc_aircraft']
+    new_label = {dataset.class_to_idx[name]: i for i, name in enumerate(keep)}
+    pairs = [(f, new_label[l]) for f, l in zip(dataset._image_files, dataset._labels)
+             if l in new_label]
+    dataset._image_files = [f for f, _ in pairs]
+    dataset._labels = [l for _, l in pairs]
+    dataset.classes = list(keep)
+    dataset.class_to_idx = {name: i for i, name in enumerate(keep)}
+    return dataset
+
+
 def filter_dset(dataset, n_img_per_cls, dataset_name):
     import random
+    # NHOM SUA: goc goi random.sample khong dat seed -> moi lan chay chon mot
+    # tap anh that khac, baseline anh that khong tai lap duoc. Dung RNG rieng
+    # seed 0 (khong dong vao RNG toan cuc ma phan train dang dung).
+    rng = random.Random(0)
     print(n_img_per_cls)
     if dataset_name == 'pets':
         _images = dataset._images
@@ -275,10 +329,10 @@ def filter_dset(dataset, n_img_per_cls, dataset_name):
         raise ValueError("Please specify valid dataset.")
     new_images = []
     new_labels = []
-    for i in set(_labels):
+    for i in sorted(set(_labels)):
         candidates = [j for j in range(len(_labels)) if _labels[j] == i]
         img_per_cls = min(n_img_per_cls, len(candidates))  # allow for less if not enoug
-        idx = random.sample(range(0, len(candidates)), img_per_cls)
+        idx = rng.sample(range(0, len(candidates)), img_per_cls)
         new_images.extend([_images[candidates[j]] for j in idx])
         new_labels.extend([_labels[candidates[j]] for j in idx])
     if dataset_name == 'pets':
@@ -313,8 +367,12 @@ def split_eurosat(file_path, split, dataset):
                          "also be found at /shared-local/jbader40/data/eurosat/EuroSAT/train/split_zhou_EuroSAT.json).")
     f = open(split_file_path)
     split_files = json.load(f)
-    data = [os.path.join(file_path, 'eurosat', '2750', path[0]) for path in split_files[split]]
-    dataset.samples = [sample for sample in dataset.samples if sample[0] in data]
+    # NHOM SUA: dung set thay vi list (goc so ~27.000 x 8.100 lan), va normpath
+    # hai ve de khop ca tren Windows (file chia dung '/', torchvision dung '\').
+    data = {os.path.normpath(os.path.join(file_path, 'eurosat', '2750', path[0]))
+            for path in split_files[split]}
+    dataset.samples = [sample for sample in dataset.samples if os.path.normpath(sample[0]) in data]
+    dataset.targets = [s[1] for s in dataset.samples]
     dataset.labels = [s[1] for s in dataset.samples]
     return dataset
 
@@ -539,7 +597,14 @@ def get_data_loader(
     if is_synth_train:
         train_loader = None
     else:
-        if dataset == 'imagenet':
+        if n_shot > 0 and dataset != 'imagenet':
+            # NHOM SUA: K-shot thi doc dung tap few-shot (muc 19). n_shot=0 giu
+            # nhanh goc ben duoi (n_img_per_cls anh tu ca phan train).
+            train_dataset = DatasetFewshotReal(
+                real_train_fewshot_data_dir,
+                train_transform if is_rand_aug else test_transform,
+                dataset, n_shot)
+        elif dataset == 'imagenet':
             train_dataset = ImageNetDatasetFromMetadata(
                 data_root=real_train_data_dir,
                 metadata_root=ospj(metadata_dir, 'train'),
@@ -577,6 +642,7 @@ def get_data_loader(
                 transform=train_transform,
                 download=True,
             )
+            train_dataset = filter_aircraft_classes(train_dataset)  # NHOM THEM
             train_dataset = filter_dset(dataset=train_dataset, n_img_per_cls=n_img_per_cls, dataset_name=dataset)
         elif dataset == 'eurosat':
             eurosat_path_train = os.path.join(real_train_data_dir, 'train')
@@ -667,6 +733,7 @@ def get_data_loader(
             transform=test_transform,
             download=True,
         )
+        test_dataset = filter_aircraft_classes(test_dataset)  # NHOM THEM
     elif dataset == 'eurosat':
         eurosat_path_test = os.path.join(real_train_data_dir, 'train')
         import ssl
@@ -676,7 +743,10 @@ def get_data_loader(
             transform=test_transform,
             download=True,
         )
-        test_dataset = split_eurosat(eurosat_path_test, 'train', test_dataset)
+        # NHOM SUA: goc truyen 'train' -> classifier duoc cham diem tren chinh
+        # 13.500 anh phan train. Tap test cua file chia CoOp la 'test' (8.100 anh).
+        # Xem docs/known-issues.md muc 17.
+        test_dataset = split_eurosat(eurosat_path_test, 'test', test_dataset)
     elif dataset == 'cars':
         # note: this must be train, because the Cars dataset had to be downloaded by hand and is kept in the same
         # directory as the training data

@@ -1,6 +1,7 @@
-> **Ghi chú của nhóm:** đây là README gốc của tác giả, giữ để tham khảo. **Trước khi
-> chạy số đầu tiên**, đọc [docs/known-issues.md](../docs/known-issues.md) mục 2: tập
-> test chưa được lọc về 20 lớp, chạy bây giờ sẽ crash hoặc ra accuracy vô nghĩa.
+> **Ghi chú của nhóm:** đây là README gốc của tác giả, giữ để tham khảo. Tập test đã
+> được sửa (Aircraft lọc về 20 lớp, EuroSAT dùng đúng phần test — known-issues mục 2,
+> 17), baseline "chỉ ảnh thật" dùng đúng tập K-shot (mục 19, cần `--n_shot=16`).
+> Chi tiết: [docs/known-issues.md](../docs/known-issues.md).
 > Cài đặt trên Colab ở [docs/setup.md](../docs/setup.md#bước-3-colab). Lệnh dưới
 > dùng `--log=wandb`; bỏ cờ đó thì mặc định là tensorboard, nhưng `local.yaml` vẫn
 > phải có key `wandb_key` (giá trị gì cũng được) — `config.py` đọc nó vô điều kiện.

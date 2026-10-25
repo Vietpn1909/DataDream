@@ -45,9 +45,8 @@ Trên máy Việt, `<fewshot_data_dir>` là
 **Đừng đổi danh sách lớp sau khi đã train.** Nhãn gắn với vị trí trong danh sách;
 đổi danh sách là mọi checkpoint và bộ ảnh sinh trước đó hết dùng được.
 
-**Tập test** không nằm ở đây: `classify/` tự tải FGVC-Aircraft qua torchvision. Lưu
-ý tập đó chưa được lọc về 20 lớp —
-[known-issues.md](known-issues.md), mục 2.
+**Tập test** không nằm ở đây: `classify/` tự tải FGVC-Aircraft qua torchvision rồi
+lọc về 20 lớp ([known-issues.md](known-issues.md), mục 2).
 
 ---
 

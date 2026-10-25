@@ -253,8 +253,8 @@ SUBSET_NAMES = {
     # 20 lop nay giu dung thu tu tuong doi cua danh sach 100 variant goc, nam o
     # cac vi tri sau (cung la nhan cua torchvision.datasets.FGVCAircraft):
     #   [0, 1, 3, 4, 5, 10, 13, 14, 17, 19, 25, 26, 28, 33, 35, 42, 47, 53, 95, 96]
-    # Can mang nay de loc + remap nhan TAP TEST, viec do CHUA LAM
-    # (xem docs/known-issues.md muc 2) - tap test hien van nap du 100 variant.
+    # Tap test va nhanh train anh that duoc loc ve 20 lop nay + doi nhan theo
+    # TEN lop bang filter_aircraft_classes() trong data.py (known-issues muc 2).
     'fgvc_aircraft': [
         '707-320', '727-200', '737-300', '737-400', '737-500',
         '747-100', '747-400', '757-200', '767-300', '777-200',
