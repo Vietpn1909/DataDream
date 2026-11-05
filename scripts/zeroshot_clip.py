@@ -168,7 +168,7 @@ def main():
                                 capture_output=True, text=True).stdout.strip()
         new = not csv_path.exists()
         with open(csv_path, "a", newline="", encoding="utf-8") as f:
-            w = csv.DictWriter(f, fieldnames=header)
+            w = csv.DictWriter(f, fieldnames=header, lineterminator="\n")  # LF nhu .gitattributes
             if new:
                 w.writeheader()
             for k, (acc, lo, hi, correct) in results.items():
