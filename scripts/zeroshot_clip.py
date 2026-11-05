@@ -116,6 +116,8 @@ def main():
         "classify": [model.templates[0].format(model.dataset_name, c) for c in classes],
         "reference": [REFERENCE[args.dataset].format(c) for c in ref_names],
     }
+    templates = {"classify": model.templates[0].format(model.dataset_name, "<lop>"),
+                 "reference": REFERENCE[args.dataset].format("<lop>")}
     tokens = {
         "classify": model.tokenized_text,  # dung tensor classify dung, khong tokenize lai
         "reference": clip.tokenize(prompts["reference"]).unsqueeze(1).to(dev),
@@ -176,7 +178,7 @@ def main():
                     "setting": "clip-zeroshot-%s" % k, "acc": "%.2f" % acc,
                     "date": datetime.date.today().isoformat(), "commit": commit,
                     "note": "%s; Wilson95 %.2f-%.2f; %d/%d anh test; ViT-B/16 chua train; prompt: %s"
-                            % (LABEL[args.dataset], lo, hi, correct, n, prompts[k][0]),
+                            % (LABEL[args.dataset], lo, hi, correct, n, templates[k]),
                 })
         print("\nDa ghi 2 dong vao %s" % csv_path)
 
