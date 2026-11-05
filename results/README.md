@@ -31,5 +31,10 @@ không ai dựng lại được con số trong bảng của báo cáo.
 - `results/clf_ablation.csv` — TV5: bảng ablation
 - `results/fid.csv` — TV3: FID và các chỉ số ảnh
 - `results/diag_class_collapse.csv` — Việt: chẩn đoán lỗi sập lớp, cột riêng do `scripts/diag_eval.py` ghi ([giải thích](../docs/investigations/class-collapse.md))
+- `results/clf_zeroshot.csv` — Vinh: CLIP ViT-B/16 zero-shot (chưa train, tức điểm xuất phát của
+  classifier) trên đúng tập test của `classify/`, ghi bằng `scripts/zeroshot_clip.py --csv`. Hai dòng
+  mỗi dataset: prompt `classify` (đầu phân loại classify bắt đầu train) và `reference` (template
+  zero-shot của CoOp); khoảng tin cậy Wilson 95% nằm ở cột `note`. Aircraft ở đây là **Aircraft-20**:
+  không so với 23,8% của paper (100 lớp)
 
 Ghi thêm dòng thì **append vào cuối file**, đừng sắp xếp lại — git merge dễ hơn nhiều.
