@@ -1,0 +1,5 @@
+run_name,dataset,variant,K,n_img,seed,setting,acc,date,commit,note
+eurosat_zeroshot_classify,eurosat,none,0,0,,clip-zeroshot-classify,40.59,2026-11-05,c27503c,EuroSAT; Wilson95 39.53-41.67; 3288/8100 anh test; ViT-B/16 chua train; prompt: a satellite photo of a <lop>
+eurosat_zeroshot_reference,eurosat,none,0,0,,clip-zeroshot-reference,48.42,2026-11-05,c27503c,EuroSAT; Wilson95 47.33-49.51; 3922/8100 anh test; ViT-B/16 chua train; prompt: a centered satellite photo of <lop>.
+aircraft20_zeroshot_classify,fgvc_aircraft,none,0,0,,clip-zeroshot-classify,55.99,2026-11-05,c27503c,Aircraft-20; Wilson95 52.20-59.71; 374/668 anh test; ViT-B/16 chua train; prompt: a aircraft photo of a <lop>
+aircraft20_zeroshot_reference,fgvc_aircraft,none,0,0,,clip-zeroshot-reference,56.89,2026-11-05,c27503c,"Aircraft-20; Wilson95 53.10-60.59; 380/668 anh test; ViT-B/16 chua train; prompt: a photo of a <lop>, a type of aircraft."
