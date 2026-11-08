@@ -107,7 +107,9 @@ def set_output_dir(args):
         if args.is_pooled_fewshot:
             mid3 += f"_shot{args.n_shot}_{args.fewshot_seed}"
     if args.is_synth_train:
-        if args.n_shot == 0: # zeroshot
+        if args.issynth_strength is not None:  # NHOM THEM: IsSynth
+            mid3 = ospj(mid3, issynth_mid_dir(args))
+        elif args.n_shot == 0: # zeroshot
             mid3 = ospj(mid3, f"shot{args.n_shot}_template{args.n_template}")
         else: # datadream
             mid3 = ospj(mid3, f"shot{args.n_shot}_{args.fewshot_seed}_template{args.n_template}")
@@ -132,9 +134,20 @@ def set_output_dir(args):
         os.makedirs(args.output_dir, exist_ok=True)
 
 
+def issynth_mid_dir(args):
+    # NHOM THEM: trung ten thu muc generate/issynth.py ghi ra
+    if not args.n_shot:
+        raise ValueError("--issynth_strength can --n_shot > 0 (IsSynth dung anh that few-shot)")
+    return (f"shot{args.n_shot}_{args.fewshot_seed}_template{args.n_template}"
+            f"_issynth_str{args.issynth_strength}")
+
+
 def set_synth_train_data_dir(args):
     if args.is_synth_train: 
-        if args.n_shot == 0:
+        if args.issynth_strength is not None:
+            # NHOM THEM: bo IsSynth do generate/issynth.py sinh (khong co LoRA)
+            mid_dir = issynth_mid_dir(args)
+        elif args.n_shot == 0:
             mid_dir = f"shot{args.n_shot}_template{args.n_template}"
         else:
             mid_dir = f"shot{args.n_shot}_{args.fewshot_seed}_template{args.n_template}"
@@ -164,7 +177,9 @@ def set_wandb_group(args):
     mixaug = "_mixaug" if args.is_mix_aug else ""
     synth_setting = ""
     if args.is_synth_train: 
-        if args.n_shot == 0:
+        if args.issynth_strength is not None:  # NHOM THEM
+            synth_setting = f"issynth_str{args.issynth_strength}"
+        elif args.n_shot == 0:
             synth_setting = "zeroshot"
         else:
             synth_setting = "datadream"
@@ -211,6 +226,9 @@ def get_args():
     parser.add_argument("--fewshot_seed", type=str2none, default="seed0",
                         help="best or seed{number}.")
     parser.add_argument("--is_dataset_wise", type=str2bool, default=False)
+    # NHOM THEM: train tren bo IsSynth (generate/issynth.py) thay vi bo DataDream / SD goc
+    parser.add_argument("--issynth_strength", type=float2none, default=None,
+                        help="strength cua bo IsSynth can doc, vd 0.15; bo trong = khong dung IsSynth")
     parser.add_argument("--datadream_lr", type=float2none, default=1e-4)
     parser.add_argument("--datadream_epoch", type=int2none, default=200)
     parser.add_argument("--datadream_train_text_encoder", type=str2bool, default=True)

@@ -4,7 +4,8 @@ Repo **không chứa dữ liệu**: ảnh thật, ảnh sinh và checkpoint đ�
 chung (Kaggle) và trên máy từng người. `.gitignore` đã chặn `data/`, `synthetic/`,
 `outputs*/`, ảnh, `.safetensors`, `.zip`.
 
-- [Ảnh thật few-shot](#ảnh-thật-few-shot) — quy tắc chung, Aircraft
+- [Ảnh thật few-shot](#ảnh-thật-few-shot) — quy tắc chung
+- [Ảnh thật few-shot: Aircraft](#ảnh-thật-few-shot-aircraft) — tạo bằng script, chỉ từ `trainval`
 - [Ảnh thật few-shot: EuroSAT](#ảnh-thật-few-shot-eurosat) — đã tạo bằng script
 - [Ảnh sinh](#ảnh-sinh) — `generate.py` tạo ra
 - [Bàn giao dữ liệu](#bàn-giao-dữ-liệu) — Kaggle, cách dùng trên Colab
@@ -47,6 +48,66 @@ Trên máy Việt, `<fewshot_data_dir>` là
 
 **Tập test** không nằm ở đây: `classify/` tự tải FGVC-Aircraft qua torchvision rồi
 lọc về 20 lớp ([known-issues.md](known-issues.md), mục 2).
+
+---
+
+## Ảnh thật few-shot: Aircraft
+
+FGVC-Aircraft chia sẵn hai phần `trainval` (6.667 ảnh) và `test` (3.333 ảnh). `classify/`
+chấm điểm trên phần `test` (torchvision `FGVCAircraft(split='test')`, lọc về 20 lớp), nên
+tập few-shot **chỉ lấy từ phần `trainval`** — lấy chỗ khác là có nguy cơ ảnh fine-tune lọt
+vào tập test.
+
+Tạo bằng script trong repo, đọc đúng bản dataset mà `classify/` tải về:
+
+```powershell
+python scripts\make_fewshot_aircraft.py --download   # lần đầu: tải FGVC-Aircraft (~2,7 GB), tạo seed0
+python scripts\make_fewshot_aircraft.py --seed 1     # thêm một seed nếu nhóm cần
+```
+
+Cách chọn: **một** `random.Random(seed)` cho cả 20 lớp, đi theo thứ tự trong
+[configs/classes_fgvc_aircraft20.txt](../configs/classes_fgvc_aircraft20.txt); mỗi lớp sort
+image id của phần `trainval` (66–67 ảnh) rồi lấy ngẫu nhiên 16 ảnh. File đặt tên `01.jpg` …
+`16.jpg` **theo thứ tự bốc**, nên ảnh bốc đầu tiên là tập 1-shot và 4 ảnh đầu là tập 4-shot.
+Cùng seed ra cùng tập trên mọi máy; chạy lại ra từng byte giống hệt.
+
+Script dừng ngay nếu một ảnh được chọn nằm trong `images_variant_test.txt`, nếu `trainval`
+và `test` có ảnh chung, nếu một lớp không đủ ảnh, nếu tên lớp không khớp từng ký tự với
+`variants.txt` hoặc `SUBSET_NAMES`, hay nếu thiếu file ảnh. `manifest.json` ghi image id gốc
+và sha256 của từng file; `scripts/test_eval_splits.py` dùng nó để kiểm lại rằng tập few-shot
+không có ảnh nào của tập test.
+
+**Banner bản quyền.** Mỗi ảnh có một dải 20 px ghi tác giả ở đáy, và README của dataset
+khuyên cắt đi khi train và đánh giá. Nhưng `classify/` nạp tập test qua torchvision, mà
+torchvision **không** cắt banner, nên nếu chỉ cắt ở tập few-shot thì ảnh train và ảnh test
+lệch nhau. Vì vậy tập seed0 **giữ nguyên banner** (chép y nguyên từng byte). Cờ
+`--crop_banner` (cắt 20 px đáy, lưu JPEG chất lượng 95) có sẵn, nhưng chỉ dùng khi cả nhóm
+quyết định cắt ở **mọi nơi** — tập few-shot lẫn loader train và test của `classify/` — và
+phải chốt trước khi train LoRA Aircraft. Ghi một câu về chuyện này trong phần hạn chế của
+báo cáo.
+
+Lưu ý cho ablation K = 1: ở seed0, `ATR-72/01.jpg` (ảnh duy nhất của tập 1-shot lớp đó) là
+ảnh chụp khoang hành khách. Nhãn đúng theo dataset, và không thay bằng tay (chọn tay là
+thiên lệch), nhưng nên nhắc tới khi đọc kết quả K = 1 của lớp này.
+
+Cấu trúc trên máy (mặc định của `--root`; trên máy Việt `<repo>` là `D:/DataDream`), khớp
+với chỗ `classify/` sẽ đọc:
+
+```
+<repo>/data/fgvc_aircraft/
+├── train/fgvc-aircraft-2013b/data/        torchvision.datasets.FGVCAircraft tải về
+│   ├── images/<image id>.jpg
+│   ├── variants.txt
+│   ├── images_variant_trainval.txt
+│   └── images_variant_test.txt
+└── real_train_fewshot/seed0/
+    ├── <lớp>/01.jpg … 16.jpg   × 20 lớp
+    └── manifest.json
+```
+
+Bàn giao giống tập EuroSAT: `aircraft20_fewshot_seed0_K16.zip`, bên trong
+`seed0/<lớp>/01.jpg … 16.jpg`, `seed0/manifest.json` và `README.txt`. Khi đã lên Kaggle thì
+`fewshot_data_dir = f"{root}/real/aircraft20_fewshot_seed0_K16"` (code tự nối `seed0/`).
 
 ---
 
@@ -112,7 +173,7 @@ là khoảng 12 GB.
 
 ## Bàn giao dữ liệu
 
-Ảnh sinh, LoRA và tập few-shot EuroSAT đã bàn giao trên **Kaggle** (công khai):
+Ảnh sinh, LoRA và tập few-shot (EuroSAT và Aircraft) đã bàn giao trên **Kaggle** (công khai):
 **<https://www.kaggle.com/datasets/vitphmnguyn/datadream>**
 
 Kaggle đã tự giải nén các file zip, nên trên Kaggle mỗi bộ là một thư mục:
@@ -123,9 +184,15 @@ handoff/
 │   ├── eurosat_sdbase_K0_n200/train/<lớp>/<số>.png      + README.txt
 │   ├── eurosat_dset_K16_n200/train/...
 │   ├── eurosat_cls_K16_n200/train/...
-│   └── aircraft20_sdbase_K0_n200/train/...
-├── lora/eurosat_lora_K16_seed0/<dataset-wise|lớp>/pytorch_lora_weights.safetensors
-└── real/eurosat_fewshot_seed0_K16/seed0/<lớp>/*.jpg   + manifest.json
+│   ├── aircraft20_sdbase_K0_n200/train/...
+│   ├── aircraft20_dset_K16_n200/train/...
+│   └── aircraft20_cls_K16_n200/train/...
+├── lora/
+│   ├── eurosat_lora_K16_seed0/<dataset-wise|lớp>/pytorch_lora_weights.safetensors
+│   └── aircraft20_lora_K16_seed0/<dataset-wise|lớp>/pytorch_lora_weights.safetensors
+└── real/
+    ├── eurosat_fewshot_seed0_K16/seed0/<lớp>/*.jpg      + manifest.json
+    └── aircraft20_fewshot_seed0_K16/seed0/<lớp>/01..16.jpg + manifest.json (Vinh)
 ```
 
 Mỗi bộ có `README.txt` (cạnh thư mục và bên trong): lệnh đã chạy, commit, thời
@@ -135,7 +202,7 @@ gian, kết quả kiểm tra, hạn chế đã biết, và **các cờ bắt bu�
 
 `classify/` đọc ảnh sinh ở
 `<synth_train_data_dir>/<dataset>/sd2.1/gs2.0_nis50/<thư mục giữa>/train/`, khác
-cấu trúc trên Kaggle. Ô dưới tải dataset (~4,3 GB) rồi tạo symlink đúng chỗ code
+cấu trúc trên Kaggle. Ô dưới tải dataset (~7,5 GB) rồi tạo symlink đúng chỗ code
 cần, không phải chép ảnh:
 
 ```python
@@ -147,18 +214,22 @@ for src, dst in {
     "eurosat_dset_K16_n200":     "eurosat/sd2.1/gs2.0_nis50/shot16_seed0_template1_lr0.0001_ep200_dswise",
     "eurosat_cls_K16_n200":      "eurosat/sd2.1/gs2.0_nis50/shot16_seed0_template1_lr0.0001_ep200",
     "aircraft20_sdbase_K0_n200": "fgvc_aircraft/sd2.1/gs2.0_nis50/shot0_template1",
+    "aircraft20_dset_K16_n200":  "fgvc_aircraft/sd2.1/gs2.0_nis50/shot16_seed0_template1_lr0.0001_ep200_dswise",
+    "aircraft20_cls_K16_n200":   "fgvc_aircraft/sd2.1/gs2.0_nis50/shot16_seed0_template1_lr0.0001_ep200",
 }.items():
     os.makedirs(os.path.dirname(f"{SYN}/{dst}"), exist_ok=True)
     if not os.path.exists(f"{SYN}/{dst}"):
         os.symlink(f"{root}/synthetic/{src}", f"{SYN}/{dst}")
-# tập few-shot EuroSAT: fewshot_data_dir = f"{root}/real/eurosat_fewshot_seed0_K16"
+# tập few-shot (code tự nối seed0/ vào sau):
+#   eurosat:       f"{root}/real/eurosat_fewshot_seed0_K16"
+#   fgvc_aircraft: f"{root}/real/aircraft20_fewshot_seed0_K16"
 ```
 
 Nếu `kagglehub` đòi đăng nhập: `kagglehub.login()`, hoặc đặt `KAGGLE_USERNAME` và
 `KAGGLE_KEY` (tạo ở kaggle.com → Settings → API).
 
-Bộ mới (Aircraft DataDream, IsSynth, ablation) sẽ thêm vào **cùng dataset này** dưới
-dạng phiên bản mới, giữ nguyên cách đặt tên dưới đây.
+Bộ mới (IsSynth, ablation) sẽ thêm vào **cùng dataset này** dưới dạng phiên bản mới,
+giữ nguyên cách đặt tên dưới đây. Thời gian chạy của từng bộ: `results/gen_timing.csv`.
 
 ### Đặt tên
 

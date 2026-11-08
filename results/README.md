@@ -26,10 +26,18 @@ không ai dựng lại được con số trong bảng của báo cáo.
 
 ## Mỗi người một file, đừng sửa chung một file
 
-- `results/gen_timing.csv` — Việt: thời gian fine-tune và sinh ảnh (số liệu cho phần compute)
+- `results/gen_timing.csv` — Việt: thời gian fine-tune và sinh ảnh (số liệu cho phần compute).
+  Cột riêng: `stage` (finetune/generate), `n_units` + `unit` (bước hoặc ảnh), `minutes`,
+  `sec_per_unit`. Cùng một máy: RTX 5070 Ti 16 GB, Windows 11, PyTorch 2.11 + CUDA 12.8;
+  sinh ảnh fp16, batch 10, 50 bước; fine-tune bf16, batch 8. Thời gian gồm cả nạp model
 - `results/clf_main.csv` — TV4: bảng chính
 - `results/clf_ablation.csv` — TV5: bảng ablation
 - `results/fid.csv` — TV3: FID và các chỉ số ảnh
 - `results/diag_class_collapse.csv` — Việt: chẩn đoán lỗi sập lớp, cột riêng do `scripts/diag_eval.py` ghi ([giải thích](../docs/investigations/class-collapse.md))
+- `results/clf_zeroshot.csv` — Vinh: CLIP ViT-B/16 zero-shot (chưa train, tức điểm xuất phát của
+  classifier) trên đúng tập test của `classify/`, ghi bằng `scripts/zeroshot_clip.py --csv`. Hai dòng
+  mỗi dataset: prompt `classify` (đầu phân loại classify bắt đầu train) và `reference` (template
+  zero-shot của CoOp); khoảng tin cậy Wilson 95% nằm ở cột `note`. Aircraft ở đây là **Aircraft-20**:
+  không so với 23,8% của paper (100 lớp)
 
 Ghi thêm dòng thì **append vào cuối file**, đừng sắp xếp lại — git merge dễ hơn nhiều.

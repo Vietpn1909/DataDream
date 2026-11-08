@@ -1,0 +1,11 @@
+run_name,dataset,variant,stage,n_units,unit,minutes,sec_per_unit,date,commit,note
+eurosat_sdbase_K0_n200,eurosat,sdbase,generate,2000,image,79.9,2.40,2026-10-22,d8e9349,"10 lop; lop SeaLake 29,8 phut do GPU cham bat thuong giua chung - bo lop do: ~1,66 s/anh"
+eurosat_dset_K16_n200,eurosat,dset,finetune,4000,step,44,0.65,2026-10-19,ef4c71f,"3.000 buoc cuoi 32,7 phut (tiep tu checkpoint-1000); 1.000 buoc dau chay rieng, uoc tinh ~11 phut"
+eurosat_dset_K16_n200,eurosat,dset,generate,2000,image,60.5,1.82,2026-10-23,8016894,"10 lop; gom nap model moi lop"
+eurosat_cls_K16_n200,eurosat,cls,finetune,4000,step,47.1,0.71,2026-10-23,8016894,"10 LoRA x 400 buoc; gom nap model moi lop"
+eurosat_cls_K16_n200,eurosat,cls,generate,2000,image,60.1,1.80,2026-10-23,50d8264,"10 lop; gom nap lai pipeline + LoRA moi lop"
+aircraft20_sdbase_K0_n200,fgvc_aircraft,sdbase,generate,4000,image,114.0,1.71,2026-10-25,50d8264,"20 lop"
+aircraft20_dset_K16_n200,fgvc_aircraft,dset,finetune,8000,step,94,0.71,2026-11-07,db86c91,"2 lan chay vi tam dung: buoc 0-3.194 36,6 phut + buoc 3.000-8.000 59,9 phut; quy doi chay mot mach"
+aircraft20_dset_K16_n200,fgvc_aircraft,dset,generate,4000,image,118.4,1.78,2026-11-07,db86c91,"20 lop; gom nap model moi lop"
+aircraft20_cls_K16_n200,fgvc_aircraft,cls,finetune,8000,step,101.7,0.76,2026-11-07,db86c91,"20 LoRA x 400 buoc; gom nap model moi lop"
+aircraft20_cls_K16_n200,fgvc_aircraft,cls,generate,4000,image,119.2,1.79,2026-11-08,db86c91,"20 lop; gom nap lai pipeline + LoRA moi lop"

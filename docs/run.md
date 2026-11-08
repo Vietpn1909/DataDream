@@ -6,7 +6,7 @@ Mọi lệnh ở đây đã được kiểm bằng chính parser của repo: đ�
 
 - [0. Chạy thử trên EuroSAT](#0-chạy-thử-trên-eurosat) — đo tốc độ, thử resume
 - [1. Fine-tune LoRA](#1-fine-tune-lora)
-- [2. Sinh ảnh](#2-sinh-ảnh)
+- [2. Sinh ảnh](#2-sinh-ảnh) — kể cả [IsSynth](#issynth)
 - [Chạy qua đêm](#chạy-qua-đêm)
 
 ---
@@ -174,6 +174,32 @@ $dd = @("--mode=datadream", "--n_shot=16", "--fewshot_seed=seed0",
 | chỉ U-Net | `shot16_seed0_template1_lr0.0001_ep200_notextlora_dswise/` |
 
 Mỗi thư mục lớp có thêm `prompts.json`. Đóng gói và bàn giao theo [data.md](data.md).
+
+### IsSynth
+
+Baseline "real guidance": lấy ảnh thật few-shot, thêm nhiễu tới `--strength` rồi khử
+nhiễu bằng SD 2.1 img2img (`generate/issynth.py`, không có LoRA). Cùng model, prompt,
+guidance, số bước, seed từng lớp với `generate.py`. Giải thích đầy đủ ở đầu file đó.
+
+```powershell
+cd D:\DataDream\generate
+# do strength trên vài lớp: LUÔN --save_dir riêng, đừng ghi vào thư mục bộ đầy đủ
+python issynth.py --dataset=fgvc_aircraft --n_img_per_class=5 --strength=0.3 --classes 2 10 16 18 `
+    --fewshot_dir=D:/DataDream/data/fgvc_aircraft/real_train_fewshot --save_dir=../outputs_logs/issynth/sweep
+# bộ đầy đủ, 200 ảnh/lớp, sau khi nhóm chốt strength
+python issynth.py --dataset=fgvc_aircraft --strength=<đã chốt> `
+    --fewshot_dir=D:/DataDream/data/fgvc_aircraft/real_train_fewshot
+```
+
+- `generate/local.yaml` không có key few-shot, nên phải truyền `--fewshot_dir`.
+- Ảnh ghi vào `.../gs2.0_nis50/shot16_seed0_template1_issynth_str<strength>/`. Script ghi
+  `issynth_meta.json` ở đó; chạy lại với số ảnh, seed, batch hay thư mục few-shot khác vào
+  cùng thư mục thì script **dừng**, không xoá ảnh.
+- Bước 3 đọc bộ này bằng `--issynth_strength=<strength>` (cùng `--n_shot=16
+  --fewshot_seed=seed0 --is_synth_train=True --sd_version=sd2.1`); thư mục kết quả của
+  classify tách riêng khỏi DataDream.
+- Strength 0,15 cho ảnh gần như bản sao ảnh thật (tương quan pixel 0,985, đo trên
+  EuroSAT); paper không nêu giá trị — nhóm chốt trước khi sinh bộ đầy đủ.
 
 ---
 

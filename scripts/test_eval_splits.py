@@ -6,10 +6,13 @@ Dung chinh cac ham trong classify/data.py, khong train gi. Can:
   <data>/eurosat/train/eurosat/2750 + split_zhou_EuroSAT.json  (EuroSAT)
   <data>/eurosat/real_train_fewshot/seed0                      (tap 16-shot)
   <data>/fgvc_aircraft/train/fgvc-aircraft-2013b               (torchvision tu tai)
+  <data>/fgvc_aircraft/real_train_fewshot/seed0                (tap 16-shot, co manifest.json)
 Thieu dataset nao thi bo qua phan do va bao ra.
 """
 import argparse
 import collections
+import hashlib
+import json
 import os
 import sys
 from pathlib import Path
@@ -75,8 +78,10 @@ if not (aroot / "fgvc-aircraft-2013b").is_dir():
     print("  bo qua: khong thay", aroot / "fgvc-aircraft-2013b")
 else:
     keep = SUBSET_NAMES["fgvc_aircraft"]
+    split_ids = {}
     for split, per_cls in (("test", (33, 34)), ("trainval", (66, 67))):
         raw = tv.datasets.FGVCAircraft(root=str(aroot), split=split, annotation_level="variant", download=False)
+        split_ids[split] = {Path(f).stem for f in raw._image_files}
         orig_name = {f: raw.classes[l] for f, l in zip(raw._image_files, raw._labels)}
         n_raw = len(raw._image_files)
         d = filter_aircraft_classes(tv.datasets.FGVCAircraft(
@@ -96,6 +101,30 @@ else:
                 root=str(aroot), split=split, annotation_level="variant", download=False)),
                 16, "fgvc_aircraft")._image_files
             check(len(a) == 320 and a == b, "filter_dset 16 anh/lop: %d anh, 2 lan chay ra cung mot tap" % len(a))
+    # Tap few-shot doi ten file thanh 01..16.jpg, nen nhan dien anh goc qua manifest.json
+    # (scripts/make_fewshot_aircraft.py ghi), kem sha256 de chac manifest dung la cua cac file nay.
+    afs = Path(args.data) / "fgvc_aircraft" / "real_train_fewshot" / "seed0"
+    if not afs.is_dir():
+        print("  bo qua tap few-shot Aircraft: khong thay", afs)
+    elif not (afs / "manifest.json").is_file():
+        check(False, "%s khong co manifest.json - khong kiem duoc anh nao thuoc tap test" % afs)
+    else:
+        with open(afs / "manifest.json", encoding="utf-8") as fh:
+            entries = [(c, e) for c, lst in json.load(fh)["classes"].items() for e in lst]
+        ids = {e["image_id"] for _, e in entries}
+        missing = [c + "/" + e["file"] for c, e in entries if not (afs / c / e["file"]).is_file()]
+        sha_bad = sum(hashlib.sha256((afs / c / e["file"]).read_bytes()).hexdigest() != e["sha256"]
+                      for c, e in entries if (afs / c / e["file"]).is_file())
+        # anh co tren dia nhung khong co trong manifest thi khong kiem duoc nguon goc
+        listed = {(c, e["file"]) for c, e in entries}
+        unlisted = [p.parent.name + "/" + p.name for p in afs.glob("*/*") if p.is_file()
+                    and (p.parent.name, p.name) not in listed]
+        check(len(entries) == 320 and ids <= split_ids["trainval"] and not (ids & split_ids["test"])
+              and sha_bad == 0 and not missing and not unlisted,
+              "%d anh few-shot (theo manifest.json, can 320): %d nam trong trainval, %d nam trong tap "
+              "test, %d file lech sha256, thieu %d file, %d file khong co trong manifest %s"
+              % (len(entries), len(ids & split_ids["trainval"]), len(ids & split_ids["test"]),
+                 sha_bad, len(missing), len(unlisted), (missing + unlisted)[:3]))
 
 # ------------------------------------------- qua get_data_loader (main.py dung ham nay)
 print("== get_data_loader: dung dung ham ma main.py goi")
