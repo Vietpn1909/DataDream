@@ -81,6 +81,12 @@ file, append vào cuối, đừng sắp xếp lại.
 Mỗi người một file trong `notebooks/`: `tv4_clip.ipynb`, `tv5_ablation.ipynb`...
 Đừng sửa notebook của người khác.
 
+Bắt đầu từ notebook mẫu [notebooks/template_colab.ipynb](notebooks/template_colab.ipynb):
+mở trên Colab rồi *File > Save a copy in GitHub* thành `notebooks/<tên>_<việc>.ipynb` trên
+nhánh của bạn. Notebook mẫu có sẵn ô đầu tiên dưới đây, cài thư viện, nạp Secrets, tải ảnh
+sinh và ảnh thật, ghi `classify/local.yaml`, và một bài kiểm nhanh (CLIP zero-shot EuroSAT,
+vài phút) để biết môi trường đã chạy được trước khi train thật.
+
 Ô đầu tiên của mọi notebook:
 
 ```python
