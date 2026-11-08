@@ -112,7 +112,7 @@ là khoảng 12 GB.
 
 ## Bàn giao dữ liệu
 
-Ảnh sinh, LoRA và tập few-shot EuroSAT đã bàn giao trên **Kaggle** (công khai):
+Ảnh sinh, LoRA và tập few-shot (EuroSAT và Aircraft) đã bàn giao trên **Kaggle** (công khai):
 **<https://www.kaggle.com/datasets/vitphmnguyn/datadream>**
 
 Kaggle đã tự giải nén các file zip, nên trên Kaggle mỗi bộ là một thư mục:
@@ -123,9 +123,15 @@ handoff/
 │   ├── eurosat_sdbase_K0_n200/train/<lớp>/<số>.png      + README.txt
 │   ├── eurosat_dset_K16_n200/train/...
 │   ├── eurosat_cls_K16_n200/train/...
-│   └── aircraft20_sdbase_K0_n200/train/...
-├── lora/eurosat_lora_K16_seed0/<dataset-wise|lớp>/pytorch_lora_weights.safetensors
-└── real/eurosat_fewshot_seed0_K16/seed0/<lớp>/*.jpg   + manifest.json
+│   ├── aircraft20_sdbase_K0_n200/train/...
+│   ├── aircraft20_dset_K16_n200/train/...
+│   └── aircraft20_cls_K16_n200/train/...
+├── lora/
+│   ├── eurosat_lora_K16_seed0/<dataset-wise|lớp>/pytorch_lora_weights.safetensors
+│   └── aircraft20_lora_K16_seed0/<dataset-wise|lớp>/pytorch_lora_weights.safetensors
+└── real/
+    ├── eurosat_fewshot_seed0_K16/seed0/<lớp>/*.jpg      + manifest.json
+    └── aircraft20_fewshot_seed0_K16/seed0/<lớp>/01..16.jpg + manifest.json (Vinh)
 ```
 
 Mỗi bộ có `README.txt` (cạnh thư mục và bên trong): lệnh đã chạy, commit, thời
@@ -135,7 +141,7 @@ gian, kết quả kiểm tra, hạn chế đã biết, và **các cờ bắt bu�
 
 `classify/` đọc ảnh sinh ở
 `<synth_train_data_dir>/<dataset>/sd2.1/gs2.0_nis50/<thư mục giữa>/train/`, khác
-cấu trúc trên Kaggle. Ô dưới tải dataset (~4,3 GB) rồi tạo symlink đúng chỗ code
+cấu trúc trên Kaggle. Ô dưới tải dataset (~7,5 GB) rồi tạo symlink đúng chỗ code
 cần, không phải chép ảnh:
 
 ```python
@@ -147,18 +153,22 @@ for src, dst in {
     "eurosat_dset_K16_n200":     "eurosat/sd2.1/gs2.0_nis50/shot16_seed0_template1_lr0.0001_ep200_dswise",
     "eurosat_cls_K16_n200":      "eurosat/sd2.1/gs2.0_nis50/shot16_seed0_template1_lr0.0001_ep200",
     "aircraft20_sdbase_K0_n200": "fgvc_aircraft/sd2.1/gs2.0_nis50/shot0_template1",
+    "aircraft20_dset_K16_n200":  "fgvc_aircraft/sd2.1/gs2.0_nis50/shot16_seed0_template1_lr0.0001_ep200_dswise",
+    "aircraft20_cls_K16_n200":   "fgvc_aircraft/sd2.1/gs2.0_nis50/shot16_seed0_template1_lr0.0001_ep200",
 }.items():
     os.makedirs(os.path.dirname(f"{SYN}/{dst}"), exist_ok=True)
     if not os.path.exists(f"{SYN}/{dst}"):
         os.symlink(f"{root}/synthetic/{src}", f"{SYN}/{dst}")
-# tập few-shot EuroSAT: fewshot_data_dir = f"{root}/real/eurosat_fewshot_seed0_K16"
+# tập few-shot (code tự nối seed0/ vào sau):
+#   eurosat:       f"{root}/real/eurosat_fewshot_seed0_K16"
+#   fgvc_aircraft: f"{root}/real/aircraft20_fewshot_seed0_K16"
 ```
 
 Nếu `kagglehub` đòi đăng nhập: `kagglehub.login()`, hoặc đặt `KAGGLE_USERNAME` và
 `KAGGLE_KEY` (tạo ở kaggle.com → Settings → API).
 
-Bộ mới (Aircraft DataDream, IsSynth, ablation) sẽ thêm vào **cùng dataset này** dưới
-dạng phiên bản mới, giữ nguyên cách đặt tên dưới đây.
+Bộ mới (IsSynth, ablation) sẽ thêm vào **cùng dataset này** dưới dạng phiên bản mới,
+giữ nguyên cách đặt tên dưới đây. Thời gian chạy của từng bộ: `results/gen_timing.csv`.
 
 ### Đặt tên
 

@@ -26,7 +26,10 @@ không ai dựng lại được con số trong bảng của báo cáo.
 
 ## Mỗi người một file, đừng sửa chung một file
 
-- `results/gen_timing.csv` — Việt: thời gian fine-tune và sinh ảnh (số liệu cho phần compute)
+- `results/gen_timing.csv` — Việt: thời gian fine-tune và sinh ảnh (số liệu cho phần compute).
+  Cột riêng: `stage` (finetune/generate), `n_units` + `unit` (bước hoặc ảnh), `minutes`,
+  `sec_per_unit`. Cùng một máy: RTX 5070 Ti 16 GB, Windows 11, PyTorch 2.11 + CUDA 12.8;
+  sinh ảnh fp16, batch 10, 50 bước; fine-tune bf16, batch 8. Thời gian gồm cả nạp model
 - `results/clf_main.csv` — TV4: bảng chính
 - `results/clf_ablation.csv` — TV5: bảng ablation
 - `results/fid.csv` — TV3: FID và các chỉ số ảnh
