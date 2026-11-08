@@ -3,9 +3,11 @@
 """Sinh bo anh IsSynth (real-data guidance) bang SD 2.1 img2img.
 
     cd generate
-    python issynth.py --dataset=fgvc_aircraft --n_img_per_class=10 --strength=0.15
+    # chay thu / do strength: LUON --save_dir rieng, de khong dung vao bo day du
     python issynth.py --dataset=fgvc_aircraft --n_img_per_class=5 --strength=0.3 --classes 2 10 16 18 \
         --save_dir=../outputs_logs/issynth/sweep
+    # bo day du (200 anh/lop), vao save_dir cua local.yaml
+    python issynth.py --dataset=fgvc_aircraft --strength=<strength da chot>
 
 IsSynth trong setting few-shot: lay mot anh that few-shot, them nhieu toi muc --strength,
 roi khu nhieu bang SD 2.1 voi prompt cua lop -> anh sinh bam sat phan phoi anh that.
@@ -24,6 +26,9 @@ Dau ra (cung kieu duong dan voi generate.py, them hau to _issynth_str<strength>)
       train/<lop>/0.png ... (n-1).png, prompts.json
       issynth_refs.json   {lop: [ten file anh that dung cho anh k = 0..n-1]} - o goc bo,
                           KHONG nam trong train/ (qa_synth.py bao loi neu co file la o do)
+      issynth_meta.json   so anh/lop, seed, batch, thu muc few-shot, model - chay lai voi
+                          gia tri khac vao cung thu muc thi script dung, khong xoa gi
+  classify/ doc bo nay bang --issynth_strength=<strength> (classify/config.py)
 
 Chay lai bao nhieu lan cung duoc: lop nao da dung 0..n-1.png va doc duoc het thi bo qua;
 lop dang do thi xoa PNG cua lop do va sinh lai tu k=0 - khong bao gio sinh tiep giua
@@ -128,6 +133,29 @@ def main():
         f"shot{args.n_shot}_{args.fewshot_seed}_template{args.n_template}_issynth_str{args.strength}",
     )
     print(set_dir)
+
+    # NHOM SUA (review PR #6): ten thu muc khong chua so anh/lop, seed, batch, thu muc
+    # few-shot. Truoc day chay lai voi --n_img_per_class nho hon vao cung thu muc thi lop
+    # "chua dung n anh" -> XOA HET anh cua bo day du; doi --seed/--fewshot_dir thi bao "bo
+    # qua" ma khong sinh gi. Ghi cac tham so nay vao issynth_meta.json, lech thi dung lai.
+    meta = {"n_img_per_class": args.n_img_per_class, "seed": args.seed, "bs": args.bs,
+            "fewshot_dir": os.path.normcase(os.path.abspath(fewshot_dir)),
+            "model_dir": os.path.normcase(os.path.abspath(model_dir))}
+    meta_path = ospj(set_dir, "issynth_meta.json")
+    if os.path.isfile(meta_path):
+        with open(meta_path, encoding="utf-8") as f:
+            old = json.load(f)
+        diff = {k: (old.get(k), v) for k, v in meta.items() if old.get(k) != v}
+        if diff:
+            sys.exit("LOI: %s da sinh voi tham so khac (cu, moi): %s\n"
+                     "Dung --save_dir khac (vd cho lan chay thu), hoac xoa thu muc do neu chac chan."
+                     % (set_dir, diff))
+    elif os.path.isdir(ospj(set_dir, "train")):
+        sys.exit("LOI: %s da co anh nhung khong co issynth_meta.json - khong biet sinh voi tham so "
+                 "nao. Dung --save_dir khac, hoac xoa thu muc do neu chac chan." % set_dir)
+    os.makedirs(set_dir, exist_ok=True)
+    with open(meta_path, "w", encoding="utf-8") as f:
+        json.dump(meta, f, indent=2, ensure_ascii=False)
 
     all_classes = SUBSET_NAMES[args.dataset]
     todo = all_classes if not args.classes else [all_classes[i] for i in args.classes]

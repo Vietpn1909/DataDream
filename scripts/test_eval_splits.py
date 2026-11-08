@@ -104,16 +104,27 @@ else:
     # Tap few-shot doi ten file thanh 01..16.jpg, nen nhan dien anh goc qua manifest.json
     # (scripts/make_fewshot_aircraft.py ghi), kem sha256 de chac manifest dung la cua cac file nay.
     afs = Path(args.data) / "fgvc_aircraft" / "real_train_fewshot" / "seed0"
-    if (afs / "manifest.json").is_file():
+    if not afs.is_dir():
+        print("  bo qua tap few-shot Aircraft: khong thay", afs)
+    elif not (afs / "manifest.json").is_file():
+        check(False, "%s khong co manifest.json - khong kiem duoc anh nao thuoc tap test" % afs)
+    else:
         with open(afs / "manifest.json", encoding="utf-8") as fh:
             entries = [(c, e) for c, lst in json.load(fh)["classes"].items() for e in lst]
         ids = {e["image_id"] for _, e in entries}
+        missing = [c + "/" + e["file"] for c, e in entries if not (afs / c / e["file"]).is_file()]
         sha_bad = sum(hashlib.sha256((afs / c / e["file"]).read_bytes()).hexdigest() != e["sha256"]
-                      for c, e in entries)
-        check(ids <= split_ids["trainval"] and not (ids & split_ids["test"]) and sha_bad == 0,
-              "%d anh few-shot (theo manifest.json): %d nam trong trainval, %d nam trong tap test, "
-              "%d file lech sha256" % (len(ids), len(ids & split_ids["trainval"]),
-                                       len(ids & split_ids["test"]), sha_bad))
+                      for c, e in entries if (afs / c / e["file"]).is_file())
+        # anh co tren dia nhung khong co trong manifest thi khong kiem duoc nguon goc
+        listed = {(c, e["file"]) for c, e in entries}
+        unlisted = [p.parent.name + "/" + p.name for p in afs.glob("*/*") if p.is_file()
+                    and (p.parent.name, p.name) not in listed]
+        check(len(entries) == 320 and ids <= split_ids["trainval"] and not (ids & split_ids["test"])
+              and sha_bad == 0 and not missing and not unlisted,
+              "%d anh few-shot (theo manifest.json, can 320): %d nam trong trainval, %d nam trong tap "
+              "test, %d file lech sha256, thieu %d file, %d file khong co trong manifest %s"
+              % (len(entries), len(ids & split_ids["trainval"]), len(ids & split_ids["test"]),
+                 sha_bad, len(missing), len(unlisted), (missing + unlisted)[:3]))
 
 # ------------------------------------------- qua get_data_loader (main.py dung ham nay)
 print("== get_data_loader: dung dung ham ma main.py goi")

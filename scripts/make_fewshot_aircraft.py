@@ -125,9 +125,24 @@ def main():
     for image_id, name in trainval:
         by_class.setdefault(name, []).append(image_id)
 
+    # NHOM SUA (review PR #6): boc va kiem HET truoc (du anh, khong lot tap test, co file),
+    # roi moi xoa tap cu - truoc day --force xoa seed<N> roi moi phat hien loi, mat tap dang
+    # dung de fine-tune LoRA. Thu tu goi rng y nhu cu nen ket qua khong doi.
+    rng = random.Random(args.seed)
+    picks = {}
+    for cls in classes:
+        candidates = sorted(by_class.get(cls, []))
+        if len(candidates) < args.shots:
+            sys.exit("LOI: lop %s chi co %d anh trainval, can %d." % (cls, len(candidates), args.shots))
+        picks[cls] = (rng.sample(candidates, args.shots), len(candidates))
+        leak = [i for i in picks[cls][0] if i in test_ids]
+        if leak:
+            sys.exit("LOI: anh %s nam trong tap test - dung lai." % leak)
+        missing_src = [i for i in picks[cls][0] if not (data / "images" / (i + ".jpg")).is_file()]
+        if missing_src:
+            sys.exit("LOI: thieu anh goc %s - them --download hoac tai lai dataset." % missing_src[:3])
     if out.exists():
         shutil.rmtree(out)
-    rng = random.Random(args.seed)
     manifest = {
         "source": "phan 'trainval' cua fgvc-aircraft-2013b (data/images_variant_trainval.txt)",
         "method": "MOT random.Random(%d) cho ca %d lop, theo thu tu configs/classes_fgvc_aircraft20.txt; "
@@ -140,19 +155,11 @@ def main():
         "classes": {},
     }
     for cls in classes:
-        candidates = sorted(by_class.get(cls, []))
-        if len(candidates) < args.shots:
-            sys.exit("LOI: lop %s chi co %d anh trainval, can %d." % (cls, len(candidates), args.shots))
-        picked = rng.sample(candidates, args.shots)
-        leak = [i for i in picked if i in test_ids]
-        if leak:
-            sys.exit("LOI: anh %s nam trong tap test - dung lai." % leak)
+        picked, n_candidates = picks[cls]
         (out / cls).mkdir(parents=True)
         files = []
         for k, image_id in enumerate(picked, 1):
             src = data / "images" / (image_id + ".jpg")
-            if not src.is_file():
-                sys.exit("LOI: khong thay %s" % src)
             dst = out / cls / ("%02d.jpg" % k)
             if args.crop_banner:
                 im = Image.open(src)
@@ -161,7 +168,7 @@ def main():
                 shutil.copy2(src, dst)
             files.append({"file": dst.name, "image_id": image_id, "sha256": sha256(dst)})
         manifest["classes"][cls] = files
-        print("  %-12s %d anh (trong %d anh trainval)" % (cls, len(picked), len(candidates)))
+        print("  %-12s %d anh (trong %d anh trainval)" % (cls, len(picked), n_candidates))
 
     (out / "manifest.json").write_text(json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8")
 
