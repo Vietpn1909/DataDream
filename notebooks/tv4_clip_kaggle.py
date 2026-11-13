@@ -39,16 +39,37 @@ def sh_out(cmd):
     return subprocess.run(cmd, shell=True, capture_output=True, text=True).stdout.splitlines()
 
 
+# ---------------------------------------------------------------- 0. kiem may
+import socket
+print("python", sys.version.split()[0], flush=True)
+sh("nvidia-smi --query-gpu=name,memory.total --format=csv,noheader || echo KHONG CO GPU")
+try:
+    socket.getaddrinfo("github.com", 443)
+except OSError:
+    raise SystemExit("Kernel KHONG CO INTERNET. Kaggle chi bat Internet/GPU cho tai khoan da xac minh so "
+                     "dien thoai (kaggle.com > Settings > Phone verification), va kernel phai bat Internet.")
+
 # ---------------------------------------------------------------- 1. repo + thu vien
 os.makedirs(WORK, exist_ok=True)
 os.makedirs(KEEP, exist_ok=True)
 if not os.path.isdir(REPO):
     sh(f"git clone -q https://github.com/Vietpn1909/DataDream.git {REPO}", check=True)
 sh(f"cd {REPO} && git checkout -q {BRANCH} && git log --oneline -1", check=True)
-sh(f"cd {REPO} && pip install -q -r requirements-clf.txt gdown", check=True)
+# KHONG dung nguyen requirements-clf.txt: Kaggle chay Python 3.13, ma numpy==1.26.4, Pillow==10.3.0,
+# scikit-learn==1.4.2, PyYAML==6.0.1 khong co wheel cho 3.13 (pip se build tu nguon va hong). Giu
+# ban Kaggle co san cho cac goi do (+ tensorboard), chi cai goi classify can ma Kaggle khong co.
+# wandb de pip chon: main.py chi `import wandb` (chay --log=tensorboard), 0.17 cu cho 3.13.
+sh("pip install -q timm==0.9.16 loralib==0.1.2 munch==4.0.0 wandb gdown tensorboard", check=True)
 sh("pip install -q git+https://github.com/openai/CLIP.git", check=True)
-sh("python -c \"import numpy, PIL, torch; print('numpy', numpy.__version__, '| Pillow', "
-   "PIL.__version__, '| torch', torch.__version__, '| cuda', torch.cuda.is_available())\"")
+# clip/clip.py co `from pkg_resources import packaging`, hong voi setuptools moi
+if sh("python -c 'import clip'"):
+    sh("pip install -q 'setuptools<70'", check=True)
+    sh("python -c 'import clip; print(\"clip ok sau khi ha setuptools\")'", check=True)
+sh("python -c \"import numpy, PIL, torch, timm, clip; print('numpy', numpy.__version__, '| Pillow', "
+   "PIL.__version__, '| torch', torch.__version__, '| timm', timm.__version__, '| cuda', "
+   "torch.cuda.is_available())\"", check=True)
+if sh("python -c 'import sys, torch; sys.exit(0 if torch.cuda.is_available() else 1)'"):
+    raise SystemExit("KHONG CO GPU: bat Accelerator GPU cho kernel (tai khoan phai xac minh so dien thoai)")
 
 # ---------------------------------------------------------------- 2. dataset Kaggle da gan
 mounts = sorted(glob.glob("/kaggle/input/**/handoff", recursive=True), key=len)
