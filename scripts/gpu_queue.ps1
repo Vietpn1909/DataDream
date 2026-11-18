@@ -11,7 +11,8 @@
 #   la mat that: no train lai tu dau va xoa checkpoint cu (limit = 1).
 # - Giu may khong ngu trong luc chay (het hieu luc khi script ket thuc).
 # - Tu choi chay neu dang co generate.py / datadream.py khac chay.
-param([switch]$DryRun)
+#   them -Only <tien to ten viec>[,...] de chi chay mot phan, vd -Only aircraft20_issynth,eurosat_issynth
+param([switch]$DryRun, [string[]]$Only)
 
 $repo = Split-Path -Parent $PSScriptRoot
 $py = "$repo\.venv\Scripts\python.exe"
@@ -26,7 +27,7 @@ New-Item -ItemType Directory -Force $logDir | Out-Null
 $commit = (git -C $repo rev-parse --short HEAD).Trim()
 
 $busy = Get-CimInstance Win32_Process -Filter "Name = 'python.exe'" |
-    Where-Object { $_.CommandLine -match "generate\.py|datadream\.py" }
+    Where-Object { $_.CommandLine -match "generate\.py|datadream\.py|issynth\.py" }
 if ($busy) {
     "DANG CO TIEN TRINH KHAC CHAY - khong chay chong len:"
     $busy | ForEach-Object { "  PID $($_.ProcessId): $($_.CommandLine)" }
@@ -54,6 +55,10 @@ $jobs = @(
        out = "$aircraftSyn\shot16_seed0_template1_issynth_str0.15"
        args = @("issynth.py", "--dataset=fgvc_aircraft", "--strength=0.15", "--n_img_per_class=200",
                 "--fewshot_dir=$repo\data\fgvc_aircraft\real_train_fewshot") },
+    @{ name = "eurosat_issynth"; type = "iss"; dataset = "eurosat"; nclass = 10; n = 200
+       out = "$synth\eurosat\sd2.1\gs2.0_nis50\shot16_seed0_template1_issynth_str0.15"
+       args = @("issynth.py", "--dataset=eurosat", "--strength=0.15", "--n_img_per_class=200",
+                "--fewshot_dir=$repo\data\eurosat\real_train_fewshot") },
     @{ name = "aircraft20_dset_K4_finetune"; type = "ft"
        ckdir = "$aircraftOut\shot4_seed0_tpl1\lr0.0001_epoch200\dataset-wise"
        args = @("launch", "datadream.py", "--dataset=fgvc_aircraft") + $common + @("--n_shot=4") },
@@ -74,6 +79,13 @@ $jobs = @(
        args = $gen + $dd + @("--is_dataset_wise_model=True", "--dataset=fgvc_aircraft",
                              "--datadream_train_text_encoder=False") + $ablN }
 )
+
+if ($Only) {
+    # powershell -File truyen "a,b" thanh MOT chuoi, nen tach lai theo dau phay
+    $Only = @($Only | ForEach-Object { $_ -split "," } | Where-Object { $_.Trim() })
+    $jobs =@($jobs | Where-Object { $n = $_.name; @($Only | Where-Object { $n -like "$_*" }).Count -gt 0 })
+    "CHI CHAY: " + (($jobs | ForEach-Object { $_.name }) -join ", ")
+}
 
 # Thong bao trong ham dung Write-Host: moi gia tri khac in ra deu bi gop vao gia
 # tri tra ve, lam $rc thanh mang thay vi ma thoat.
