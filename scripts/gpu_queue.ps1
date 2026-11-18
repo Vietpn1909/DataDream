@@ -44,28 +44,35 @@ $common = @("--fewshot_seed=seed0", "--n_shot=16", "--n_template=1",
 $dd = @("--mode=datadream", "--n_shot=16", "--fewshot_seed=seed0",
         "--datadream_lr=1e-4", "--datadream_epoch=200")
 
-$aircraftCls = @(Get-Content "$repo\configs\classes_fgvc_aircraft20.txt" |
-    Where-Object { $_.Trim() -and -not $_.StartsWith("#") })
-$ckRoot = "$repo\DataDream\outputs\fgvc_aircraft\shot16_seed0_tpl1\lr0.0001_epoch200"
+$aircraftOut = "$repo\DataDream\outputs\fgvc_aircraft"
+$aircraftSyn = "$synth\fgvc_aircraft\sd2.1\gs2.0_nis50"
+$ablN = @("--n_img_per_class=100")  # bo ablation: 100 anh/lop (docs/run.md); co sau thang co truoc
 
+# Da chot (18/11/2026): IsSynth strength 0.15; ablation K = 1, 4 va chi U-Net, deu la dset.
 $jobs = @(
-    @{ name = "aircraft20_dset_finetune"; type = "ft"
-       ckdir = "$ckRoot\dataset-wise"
-       args = @("launch", "datadream.py", "--dataset=fgvc_aircraft") + $common },
-    @{ name = "aircraft20_dset_generate"; type = "gen"; dataset = "fgvc_aircraft"; nclass = 20; n = 200
-       out = "$synth\fgvc_aircraft\sd2.1\gs2.0_nis50\shot16_seed0_template1_lr0.0001_ep200_dswise"
-       args = $gen + $dd + @("--is_dataset_wise_model=True", "--dataset=fgvc_aircraft") }
-)
-# cls: mot LoRA moi lop, 400 buoc - qua it de ghi checkpoint, tat may giua chung
-# thi lop do train lai tu dau (~5 phut), cac lop da xong duoc bo qua
-for ($i = 0; $i -lt $aircraftCls.Count; $i++) {
-    $jobs += @{ name = "aircraft20_cls_finetune_$i"; type = "ft"; ckdir = "$ckRoot\$($aircraftCls[$i])"
-                args = @("launch", "datadream.py", "--dataset=fgvc_aircraft", "--target_class_idx=$i") + $common }
-}
-$jobs += @(
-    @{ name = "aircraft20_cls_generate"; type = "gen"; dataset = "fgvc_aircraft"; nclass = 20; n = 200
-       out = "$synth\fgvc_aircraft\sd2.1\gs2.0_nis50\shot16_seed0_template1_lr0.0001_ep200"
-       args = $gen + $dd + @("--is_dataset_wise_model=False", "--dataset=fgvc_aircraft") }
+    @{ name = "aircraft20_issynth"; type = "iss"; dataset = "fgvc_aircraft"; nclass = 20; n = 200
+       out = "$aircraftSyn\shot16_seed0_template1_issynth_str0.15"
+       args = @("issynth.py", "--dataset=fgvc_aircraft", "--strength=0.15", "--n_img_per_class=200",
+                "--fewshot_dir=$repo\data\fgvc_aircraft\real_train_fewshot") },
+    @{ name = "aircraft20_dset_K4_finetune"; type = "ft"
+       ckdir = "$aircraftOut\shot4_seed0_tpl1\lr0.0001_epoch200\dataset-wise"
+       args = @("launch", "datadream.py", "--dataset=fgvc_aircraft") + $common + @("--n_shot=4") },
+    @{ name = "aircraft20_dset_K4_generate"; type = "gen"; dataset = "fgvc_aircraft"; nclass = 20; n = 100
+       out = "$aircraftSyn\shot4_seed0_template1_lr0.0001_ep200_dswise"
+       args = $gen + $dd + @("--is_dataset_wise_model=True", "--dataset=fgvc_aircraft", "--n_shot=4") + $ablN },
+    @{ name = "aircraft20_dset_K1_finetune"; type = "ft"
+       ckdir = "$aircraftOut\shot1_seed0_tpl1\lr0.0001_epoch200\dataset-wise"
+       args = @("launch", "datadream.py", "--dataset=fgvc_aircraft") + $common + @("--n_shot=1") },
+    @{ name = "aircraft20_dset_K1_generate"; type = "gen"; dataset = "fgvc_aircraft"; nclass = 20; n = 100
+       out = "$aircraftSyn\shot1_seed0_template1_lr0.0001_ep200_dswise"
+       args = $gen + $dd + @("--is_dataset_wise_model=True", "--dataset=fgvc_aircraft", "--n_shot=1") + $ablN },
+    @{ name = "aircraft20_dset_unetonly_finetune"; type = "ft"
+       ckdir = "$aircraftOut\shot16_seed0_tpl1_notextlora\lr0.0001_epoch200\dataset-wise"
+       args = @("launch", "datadream.py", "--dataset=fgvc_aircraft") + $common + @("--train_text_encoder=False") },
+    @{ name = "aircraft20_dset_unetonly_generate"; type = "gen"; dataset = "fgvc_aircraft"; nclass = 20; n = 100
+       out = "$aircraftSyn\shot16_seed0_template1_lr0.0001_ep200_notextlora_dswise"
+       args = $gen + $dd + @("--is_dataset_wise_model=True", "--dataset=fgvc_aircraft",
+                             "--datadream_train_text_encoder=False") + $ablN }
 )
 
 # Thong bao trong ham dung Write-Host: moi gia tri khac in ra deu bi gop vao gia
@@ -100,6 +107,21 @@ foreach ($j in $jobs) {
         if ($ck) { $argv = $argv + @("--resume_from_checkpoint=latest"); $note = "tiep tuc tu " + (($ck | ForEach-Object Name) -join ",") }
         $rc = Run-Step $j.name $acc $argv "$repo\DataDream" $note
         if ($rc -ne 0 -or (-not $DryRun -and -not (Test-Path "$($j.ckdir)\pytorch_lora_weights.safetensors"))) { $failed = $true; break }
+    }
+    elseif ($j.type -eq "iss") {
+        # issynth.py tu bo qua lop da du, tu sinh lai lop dang do tu anh 0, va dung neu thu muc
+        # da sinh voi tham so khac (issynth_meta.json) -> chi can truyen cac lop con thieu.
+        $extra = @(); if ($DryRun) { $extra = @("--no-delete") }
+        $todo = @(& $py $status $j.out $j.dataset $j.n @extra)
+        if ($todo.Count -eq 0) { "  du $($j.n) anh x $($j.nclass) lop - bo qua"; continue }
+        $idxs = @($todo | ForEach-Object { ($_ -split "`t")[0] })
+        "  con thieu $($todo.Count)/$($j.nclass) lop"
+        $rc = Run-Step $j.name $py ($j.args + @("--classes") + $idxs) "$repo\generate" ("lop " + ($idxs -join ","))
+        if ($rc -ne 0) { $failed = $true; break }
+        if (-not $DryRun) {
+            $left = @(& $py $status $j.out $j.dataset $j.n)
+            if ($left.Count -gt 0) { "  VAN CON THIEU sau khi chay: $left"; $failed = $true; break }
+        }
     }
     else {
         $extra = @(); if ($DryRun) { $extra = @("--no-delete") }
