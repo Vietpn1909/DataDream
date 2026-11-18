@@ -186,7 +186,9 @@ handoff/
 │   ├── eurosat_cls_K16_n200/train/...
 │   ├── aircraft20_sdbase_K0_n200/train/...
 │   ├── aircraft20_dset_K16_n200/train/...
-│   └── aircraft20_cls_K16_n200/train/...
+│   ├── aircraft20_cls_K16_n200/train/...
+│   ├── aircraft20_issynth_K16_n200/train/...     IsSynth, strength 0,15
+│   └── eurosat_issynth_K16_n200/train/...
 ├── lora/
 │   ├── eurosat_lora_K16_seed0/<dataset-wise|lớp>/pytorch_lora_weights.safetensors
 │   └── aircraft20_lora_K16_seed0/<dataset-wise|lớp>/pytorch_lora_weights.safetensors
@@ -202,7 +204,7 @@ gian, kết quả kiểm tra, hạn chế đã biết, và **các cờ bắt bu�
 
 `classify/` đọc ảnh sinh ở
 `<synth_train_data_dir>/<dataset>/sd2.1/gs2.0_nis50/<thư mục giữa>/train/`, khác
-cấu trúc trên Kaggle. Ô dưới tải dataset (~7,5 GB) rồi tạo symlink đúng chỗ code
+cấu trúc trên Kaggle. Ô dưới tải dataset (~9 GB) rồi tạo symlink đúng chỗ code
 cần, không phải chép ảnh:
 
 ```python
@@ -216,6 +218,8 @@ for src, dst in {
     "aircraft20_sdbase_K0_n200": "fgvc_aircraft/sd2.1/gs2.0_nis50/shot0_template1",
     "aircraft20_dset_K16_n200":  "fgvc_aircraft/sd2.1/gs2.0_nis50/shot16_seed0_template1_lr0.0001_ep200_dswise",
     "aircraft20_cls_K16_n200":   "fgvc_aircraft/sd2.1/gs2.0_nis50/shot16_seed0_template1_lr0.0001_ep200",
+    "aircraft20_issynth_K16_n200": "fgvc_aircraft/sd2.1/gs2.0_nis50/shot16_seed0_template1_issynth_str0.15",
+    "eurosat_issynth_K16_n200":  "eurosat/sd2.1/gs2.0_nis50/shot16_seed0_template1_issynth_str0.15",
 }.items():
     os.makedirs(os.path.dirname(f"{SYN}/{dst}"), exist_ok=True)
     if not os.path.exists(f"{SYN}/{dst}"):
@@ -228,7 +232,7 @@ for src, dst in {
 Nếu `kagglehub` đòi đăng nhập: `kagglehub.login()`, hoặc đặt `KAGGLE_USERNAME` và
 `KAGGLE_KEY` (tạo ở kaggle.com → Settings → API).
 
-Bộ mới (IsSynth, ablation) sẽ thêm vào **cùng dataset này** dưới dạng phiên bản mới,
+Bộ mới (ablation K và chỉ U-Net) sẽ thêm vào **cùng dataset này** dưới dạng phiên bản mới,
 giữ nguyên cách đặt tên dưới đây. Thời gian chạy của từng bộ: `results/gen_timing.csv`.
 
 ### Đặt tên

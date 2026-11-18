@@ -9,3 +9,5 @@ aircraft20_dset_K16_n200,fgvc_aircraft,dset,finetune,8000,step,94,0.71,2026-11-0
 aircraft20_dset_K16_n200,fgvc_aircraft,dset,generate,4000,image,118.4,1.78,2026-11-07,db86c91,"20 lop; gom nap model moi lop"
 aircraft20_cls_K16_n200,fgvc_aircraft,cls,finetune,8000,step,101.7,0.76,2026-11-07,db86c91,"20 LoRA x 400 buoc; gom nap model moi lop"
 aircraft20_cls_K16_n200,fgvc_aircraft,cls,generate,4000,image,119.2,1.79,2026-11-08,db86c91,"20 lop; gom nap lai pipeline + LoRA moi lop"
+aircraft20_issynth_K16_n200,fgvc_aircraft,issynth,generate,4000,image,28.2,0.42,2026-11-18,bac9478,"strength 0.15; img2img 8 lan goi UNet/anh; 1 tien trinh cho ca 20 lop (khong nap lai model moi lop)"
+eurosat_issynth_K16_n200,eurosat,issynth,generate,2000,image,14.8,0.44,2026-11-18,bac9478,"strength 0.15; 1 tien trinh cho ca 10 lop"
