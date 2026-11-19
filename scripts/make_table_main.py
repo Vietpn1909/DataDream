@@ -140,6 +140,11 @@ NOTES = [
     "¹ Aircraft của nhóm là Aircraft-20 (20 lớp, 668 ảnh test); paper dùng 100 lớp, nên hai cột "
     "Aircraft không so trực tiếp được (bài toán 20 lớp dễ hơn nhiều).",
     "Δ = nhóm − paper (chỉ EuroSAT). DISEF: nhóm không chạy.",
+    "IsSynth của nhóm dùng strength 0,15 (chốt 18/11): ảnh sinh gần như bản sao 16 ảnh thật "
+    "(tương quan pixel ~0,985), nên dòng IsSynth chỉ-ảnh-sinh gần với train trên ảnh thật, "
+    "không so được với IsSynth của paper.",
+    "Chỉ ảnh sinh: accuracy cao nhất ở vài epoch đầu rồi giảm (vd EuroSAT dset 67,2 ở epoch 2 → "
+    "64,0 ở epoch cuối); số best theo tập test nằm ở cột note của CSV, không dùng trong bảng.",
 ]
 
 
