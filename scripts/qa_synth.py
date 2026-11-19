@@ -44,6 +44,10 @@ ap.add_argument("--n", type=int, default=200)
 ap.add_argument("--after", default="2026-10-22T22:00")
 ap.add_argument("--out", default=str(REPO / "outputs_logs" / "qa"))
 ap.add_argument("--clip", default="D:/models/clip-vit-base-patch16")
+# Nguong "anh thu k giua 2 lop khac nhau giong nhau" (loi seed chung). 0.1 dung cho anh sinh tu chu
+# (SD goc, DataDream: ~0.00-0.09). IsSynth bam sat anh that nen thua huong muc nen cua CHINH anh that:
+# Aircraft that ~0.18 (bo cuc may bay o giua + banner day), EuroSAT ~0 -> Aircraft IsSynth dung 0.3.
+ap.add_argument("--max_same_k", type=float, default=0.1)
 args = ap.parse_args()
 
 root = Path(args.root) / "train"
@@ -181,7 +185,9 @@ else:
 same_k = np.array([float(G[i, k] @ G[j, k]) / G.shape[2]
                    for i, j in itertools.combinations(range(C), 2) for k in range(N)])
 msg = "anh thu k giua 2 lop khac nhau: tuong quan TB %.3f, %.1f%% cap > 0.8" % (same_k.mean(), 100 * (same_k > 0.8).mean())
-(ok if same_k.mean() < 0.1 else bad)(msg + (" (binh thuong ~0)" if same_k.mean() < 0.1 else " -> LOI SEED CHUNG"))
+lim = args.max_same_k
+(ok if same_k.mean() < lim else bad)(msg + (" (duoi nguong %.2f)" % lim if same_k.mean() < lim
+                                            else " (>= nguong %.2f) -> LOI SEED CHUNG" % lim))
 
 # ---------------------------------------------------------------- 6. CLIP
 dev = "cuda"

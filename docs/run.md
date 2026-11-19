@@ -198,8 +198,10 @@ python issynth.py --dataset=fgvc_aircraft --strength=<đã chốt> `
 - Bước 3 đọc bộ này bằng `--issynth_strength=<strength>` (cùng `--n_shot=16
   --fewshot_seed=seed0 --is_synth_train=True --sd_version=sd2.1`); thư mục kết quả của
   classify tách riêng khỏi DataDream.
-- Strength 0,15 cho ảnh gần như bản sao ảnh thật (tương quan pixel 0,985, đo trên
-  EuroSAT); paper không nêu giá trị — nhóm chốt trước khi sinh bộ đầy đủ.
+- **Đã chốt strength 0,15** (18/11/2026). Paper không nêu giá trị; ở mức này ảnh sinh gần
+  như bản sao ảnh thật (tương quan pixel 0,985, đo trên EuroSAT) — nêu trong phần hạn chế.
+- Cũng đã chốt cùng ngày: ablation K = 1 và K = 4, và biến thể chỉ U-Net, đều là dset với
+  100 ảnh/lớp, chỉ few-shot seed0. Lệnh chạy cả loạt: `scripts\gpu_queue.ps1`.
 
 ---
 
