@@ -20,7 +20,7 @@ import sys
 import types
 
 DATASET = "eurosat"  # TV4_DATASET: "eurosat" hoac "fgvc_aircraft" (kernel tu ghi de dong nay)
-BRANCH = "hnguyen"
+BRANCH = "master"   # nhanh de checkout; chi doi khi chay code chua merge
 WORK = "/tmp/dd"                 # o dia tam cua Kaggle: du cho / anh that / output
 REPO = f"{WORK}/DataDream"
 KEEP = "/kaggle/working/tv4"     # /kaggle/working duoc Kaggle luu lai sau phien
