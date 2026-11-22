@@ -30,7 +30,12 @@ không ai dựng lại được con số trong bảng của báo cáo.
   Cột riêng: `stage` (finetune/generate), `n_units` + `unit` (bước hoặc ảnh), `minutes`,
   `sec_per_unit`. Cùng một máy: RTX 5070 Ti 16 GB, Windows 11, PyTorch 2.11 + CUDA 12.8;
   sinh ảnh fp16, batch 10, 50 bước; fine-tune bf16, batch 8. Thời gian gồm cả nạp model
-- `results/clf_main.csv` — TV4: bảng chính
+- `results/clf_main.csv` — TV4: bảng chính, ghi bằng `notebooks/tv4_clip.ipynb`. `run_name` =
+  tên bộ ảnh (`eurosat_dset_K16_n200`), thêm `_pooled` nếu train thật + sinh; chỉ ảnh thật là
+  `<ds>_real_K16`. `setting`: `clip-lora` (chỉ thật hoặc chỉ sinh), `clip-lora-pooled` (thật + sinh,
+  λ = 0,8). `acc` = top-1 ở **epoch cuối**. Số "best" chọn theo tập test chỉ ghi trong `note`, cùng
+  hyperparameter. Bảng so với Table 1 của paper: `python scripts/make_table_main.py` (thêm
+  `--latex` cho báo cáo)
 - `results/clf_ablation.csv` — TV5: bảng ablation
 - `results/fid.csv` — TV3: FID và các chỉ số ảnh
 - `results/diag_class_collapse.csv` — Việt: chẩn đoán lỗi sập lớp, cột riêng do `scripts/diag_eval.py` ghi ([giải thích](../docs/investigations/class-collapse.md))
